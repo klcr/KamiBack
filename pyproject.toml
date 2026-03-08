@@ -30,10 +30,15 @@ python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+explicit_package_bases = true
+mypy_path = "."
+
+exclude = [".*_test\\.py$"]
 
 [tool.pytest.ini_options]
 testpaths = ["domain", "api"]
 python_files = ["*_test.py"]
+pythonpath = ["."]
 
 [tool.importlinter]
 root_packages = ["domain", "api"]
