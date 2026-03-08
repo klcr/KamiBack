@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# pre-push hook (ガードレール④)
+# git push 時に全体 lint + 型チェック + テスト + 依存チェックを実行する
+
+set -e
+
+# PATH にツールのインストール先を含める
+export PATH="/usr/local/bin:$PATH"
+
+echo "=== pre-push: Running lint ==="
+make lint
+
+echo "=== pre-push: Running typecheck ==="
+make typecheck
+
+echo "=== pre-push: Running tests ==="
+make test
+
+echo "=== pre-push: Running dependency check ==="
+lint-imports
+
+echo "=== pre-push: All checks passed ==="

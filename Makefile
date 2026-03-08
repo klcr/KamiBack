@@ -1,4 +1,4 @@
-.PHONY: build test lint typecheck format clean
+.PHONY: build test lint typecheck format clean setup-hooks
 
 build:
 	@echo "Building domain + api..."
@@ -22,6 +22,10 @@ typecheck:
 format:
 	ruff format domain/ api/
 	@if [ -f web/node_modules/.package-lock.json ]; then cd web && npx biome format --write ./src; else echo "web node_modules not installed — skipping web format"; fi
+
+setup-hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks configured to use .githooks/"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
