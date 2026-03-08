@@ -52,6 +52,7 @@ web/src/features/{feature-name}/
 ### 完了確認
 
 ```bash
+cd web && npx biome check ./src
 cd web && npx tsc --noEmit
 cd web && npx vitest run
 ```

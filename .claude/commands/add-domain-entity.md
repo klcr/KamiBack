@@ -47,5 +47,7 @@ domain/src/{aggregate_name}/
 ```bash
 make typecheck
 make test
+make lint
+ruff format --check domain/ api/
 lint-imports
 ```

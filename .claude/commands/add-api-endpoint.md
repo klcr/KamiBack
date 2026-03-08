@@ -48,6 +48,8 @@ api/src/api/routes/{feature}/
 
 ```bash
 make typecheck
+make test
 make lint
+ruff format --check domain/ api/
 lint-imports
 ```
