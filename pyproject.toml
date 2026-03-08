@@ -5,6 +5,10 @@ description = "帳票OCRマッピングシステム — 紙の帳票を構造化
 requires-python = ">=3.11"
 dependencies = []
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["domain*", "api*"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
