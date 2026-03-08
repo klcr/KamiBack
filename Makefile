@@ -7,7 +7,7 @@ build:
 	@if [ -f web/node_modules/.package-lock.json ]; then cd web && npm run build; else echo "web node_modules not installed — skipping web build"; fi
 
 test:
-	pytest domain/ api/ -v
+	pytest domain/ api/ -v --import-mode=importlib
 	@if [ -f web/node_modules/.package-lock.json ] && find web/src -name '*.test.*' -o -name '*.spec.*' 2>/dev/null | grep -q .; then cd web && npx vitest run; else echo "web tests skipped (no node_modules or no test files)"; fi
 
 lint:
