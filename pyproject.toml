@@ -1,0 +1,52 @@
+[project]
+name = "kami-back"
+version = "0.1.0"
+description = "帳票OCRマッピングシステム — 紙の帳票を構造化データの一時的な入れ物にする"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13",
+    "import-linter>=2.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["domain/src", "api/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["domain", "api"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["domain", "api"]
+python_files = ["*_test.py"]
+
+[tool.importlinter]
+root_packages = ["domain", "api"]
+
+[[tool.importlinter.contracts]]
+name = "Domain layer independence"
+type = "independence"
+modules = ["domain"]
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture"
+type = "layers"
+layers = [
+    "api",
+    "domain",
+]

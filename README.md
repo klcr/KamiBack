@@ -1,108 +1,61 @@
-# DDD Scaffold Templates
+# KamiBack — 帳票OCRマッピングシステム
 
-DDD（ドメイン駆動設計）+ レイヤードアーキテクチャのプロジェクトを新規構築するためのスキャフォールディングテンプレート集。
+紙の帳票を「構造化データの一時的な入れ物」にするシステム。帳票HTMLに定義されたmm座標を使って値を紙の上に配置し（往路）、同じmm座標を使って紙の上から値を読み取る（復路）。
 
-## 特徴
+## アーキテクチャ
 
-- **技術スタック非依存**: TypeScript / Python / Go いずれにも対応
-- **Claude Code 統合**: `/project:init-scaffold` コマンドで対話的にプロジェクトを生成
-- **9 つのガードレール**: 品質を機械的に担保する仕組みを自動構築
-- **DDD パターン**: Domain / Application / Infrastructure / Presentation の 4 層構造
+DDD（ドメイン駆動設計）+ レイヤードアーキテクチャで構築。
 
-## クイックスタート
+| レイヤー | ディレクトリ | 役割 |
+|---------|------------|------|
+| Domain | `domain/` | 型定義・エンティティ・ビジネスルール（外部依存ゼロ） |
+| API | `api/` | FastAPI バックエンド API |
+| Web | `web/` | React + Vite レビュー UI |
 
-1. このリポジトリをクローンまたはテンプレートとして使用
-2. Claude Code で以下を実行:
+## セットアップ
 
+### Python（Domain + API）
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
-/project:init-scaffold
+
+### TypeScript（Web）
+
+```bash
+cd web
+npm install
 ```
 
-3. 対話的にプロジェクト構成をヒアリング:
-   - プロジェクト名・概要
-   - 技術スタック（言語、フレームワーク、ツールチェイン）
-   - レイヤー構成（Domain / API / Web / Mobile）
+## 開発コマンド
 
-4. フォルダ構造・設定ファイル・ガードレール一式が自動生成
-
-## 生成されるもの
-
-| カテゴリ | 内容 |
+| コマンド | 説明 |
 |---------|------|
-| CLAUDE.md | プロジェクト全体の AI 向けガイドライン + ガードレール定義 |
-| PROGRESS.md | 進捗管理（フェーズ状態・差分・迷走検知） |
-| レイヤー別 CLAUDE.md | 各レイヤー固有のルール・ディレクトリ構成・命名規約 |
-| slash command | `/project:add-domain-entity`, `/project:add-usecase`, `/project:review` 等 |
-| docs/ | ADR テンプレート、制約条件管理、事象管理、マイルストーン定義 |
-| 設定ファイル | .gitignore, Git フック, CI パイプライン, 依存チェック, リンター設定 |
+| `make build` | ビルド |
+| `make test` | テスト実行 |
+| `make lint` | Lint |
+| `make typecheck` | 型チェック |
+| `make format` | フォーマット |
+| `lint-imports` | 依存方向チェック |
 
-## 生成されるプロジェクト構造例
+## Claude Code との協業
 
-### TypeScript + Turborepo + Azure Functions + React
+このプロジェクトは Claude Code との協業を前提に設計されています。
 
-```
-my-project/
-├── .claude/commands/           # slash command 群
-├── CLAUDE.md                   # ガイドライン + ガードレール
-├── PROGRESS.md                 # 進捗管理
-├── docs/                       # ADR, constraints, issues, milestones
-├── packages/
-│   ├── domain/                 # ドメイン層（外部依存ゼロ）
-│   ├── api/                    # Azure Functions + ユースケース
-│   └── web/                    # React + Vite
-├── package.json, turbo.json, tsconfig.base.json
-├── .dependency-cruiser.cjs     # 依存方向チェック
-└── .husky/                     # Git フック
-```
+- `CLAUDE.md` — プロジェクト全体のガイドライン
+- `.claude/commands/` — 定型操作の slash command
+- `docs/design-principles.md` — ビジョン・判断基準・設計原則
+- `docs/constraints/` — 制約条件の記録
+- `docs/issues/` — 事象管理
 
-### Python + FastAPI
+主な slash command:
 
-```
-my-project/
-├── .claude/commands/
-├── CLAUDE.md
-├── PROGRESS.md
-├── docs/
-├── src/
-│   ├── domain/
-│   ├── use_cases/
-│   ├── infrastructure/
-│   └── api/
-├── tests/
-├── pyproject.toml
-└── .pre-commit-config.yaml
-```
-
-## テンプレート構成
-
-```
-scaffold-templates/
-├── README.md               # テンプレートの詳細説明
-├── root/                   # ルート設定テンプレート
-├── layers/                 # レイヤー別 CLAUDE.md テンプレート
-├── commands/               # slash command テンプレート
-├── docs/                   # ドキュメントテンプレート
-└── guardrails/             # ガードレール設計テンプレート
-```
-
-詳細は [`scaffold-templates/README.md`](scaffold-templates/README.md) を参照。
-
-## 9 つのガードレール
-
-生成されるプロジェクトには以下のガードレールが組み込まれます:
-
-| # | ガードレール | 目的 |
-|---|-------------|------|
-| 1 | slash command | 定型操作を標準化し、Claude への文脈提供を構造化 |
-| 2 | 依存方向チェック | レイヤー間の不正な依存を機械的に検出 |
-| 3 | テスト原則 | レイヤーごとの適切なテスト戦略を定義 |
-| 4 | Git フック | commit / push 時に自動で品質チェック |
-| 5 | レビューコマンド | 設計ガイドライン違反を AI が検出 |
-| 6 | 制約条件記録 | 技術的制約・トレードオフを文書化 |
-| 7 | 事象管理 | ブロッカー・課題を追跡 |
-| 8 | 環境保護 | クロスプラットフォーム開発での lockfile 汚染を防止 |
-| 9 | 進捗管理 | `PROGRESS.md` で全体進捗・フェーズ状態・迷走検知を管理 |
-
-## ライセンス
-
-MIT
+| コマンド | 用途 |
+|---------|------|
+| `/project:add-domain-entity <名前>` | ドメインエンティティを追加 |
+| `/project:add-usecase <名前>` | ユースケースを追加 |
+| `/project:add-api-endpoint <名前>` | API エンドポイントを追加 |
+| `/project:add-web-feature <名前>` | Web フィーチャーを追加 |
+| `/project:review` | 設計レビューを実行 |
