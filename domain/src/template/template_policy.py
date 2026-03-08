@@ -37,8 +37,7 @@ def _validate_page_count(
     """ページ数の一致を確認。"""
     if template.page_count != len(manifest.pages):
         errors.append(
-            f"page count mismatch: template has {template.page_count} pages, "
-            f"manifest has {len(manifest.pages)} pages"
+            f"page count mismatch: template has {template.page_count} pages, manifest has {len(manifest.pages)} pages"
         )
 
 
@@ -66,16 +65,12 @@ def _validate_variable_names(
     # マニフェストにあるがテンプレートにない変数
     only_in_manifest = manifest_vars - template_vars
     for var in sorted(only_in_manifest):
-        errors.append(
-            f"variable '{var}' is in manifest but not in template HTML"
-        )
+        errors.append(f"variable '{var}' is in manifest but not in template HTML")
 
     # テンプレートにあるがマニフェストにない変数
     only_in_template = template_vars - manifest_vars
     for var in sorted(only_in_template):
-        errors.append(
-            f"variable '{var}' is in template HTML but not in manifest"
-        )
+        errors.append(f"variable '{var}' is in template HTML but not in manifest")
 
 
 def _validate_box_ids(

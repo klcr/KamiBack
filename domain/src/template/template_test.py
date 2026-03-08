@@ -60,9 +60,7 @@ def _make_template_metadata(
             PageTemplate(
                 page_index=0,
                 boxes=boxes,
-                lines=(
-                    Line(line_id="p0-line-1", x1_mm=0, y1_mm=50, x2_mm=190, y2_mm=50),
-                ),
+                lines=(Line(line_id="p0-line-1", x1_mm=0, y1_mm=50, x2_mm=190, y2_mm=50),),
             ),
         ),
     )

@@ -33,9 +33,7 @@ class OcrResult(BaseEntity):
                 return r
         return None
 
-    def correct_field(
-        self, variable_name: str, new_value: str | int | float | bool
-    ) -> None:
+    def correct_field(self, variable_name: str, new_value: str | int | float | bool) -> None:
         """フィールドの値を手動修正する。"""
         for i, r in enumerate(self.field_results):
             if r.variable_name == variable_name:
@@ -51,10 +49,7 @@ class OcrResult(BaseEntity):
     @property
     def all_confirmed(self) -> bool:
         """全フィールドが確認済み（confirmed or corrected）かどうか。"""
-        return all(
-            r.status in (ReadingStatus.CONFIRMED, ReadingStatus.CORRECTED)
-            for r in self.field_results
-        )
+        return all(r.status in (ReadingStatus.CONFIRMED, ReadingStatus.CORRECTED) for r in self.field_results)
 
     def to_simple_dict(self) -> dict[str, str | int | float | bool | None]:
         """{ variableName: value } のシンプルなオブジェクトとして出力する。"""

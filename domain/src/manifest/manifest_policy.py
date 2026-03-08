@@ -43,9 +43,7 @@ def _validate_required_fields(data: ManifestData, errors: list[str]) -> None:
             if not field.variable_name:
                 errors.append(f"variable_name is required for box {field.box_id}")
             if not field.box_id:
-                errors.append(
-                    f"box_id is required for variable {field.variable_name}"
-                )
+                errors.append(f"box_id is required for variable {field.variable_name}")
 
 
 def _validate_coordinate_ranges(data: ManifestData, errors: list[str]) -> None:
@@ -68,9 +66,7 @@ def _validate_coordinate_ranges(data: ManifestData, errors: list[str]) -> None:
                 )
             # 座標が負でないか
             if ar.x_mm < 0 or ar.y_mm < 0:
-                errors.append(
-                    f"field '{field.variable_name}' absolute_region has negative coordinates"
-                )
+                errors.append(f"field '{field.variable_name}' absolute_region has negative coordinates")
 
 
 def _validate_variable_uniqueness(data: ManifestData, errors: list[str]) -> None:
@@ -80,9 +76,6 @@ def _validate_variable_uniqueness(data: ManifestData, errors: list[str]) -> None
         for field in page.fields:
             name = field.variable_name
             if name in seen:
-                errors.append(
-                    f"duplicate variable_name '{name}' "
-                    f"(pages {seen[name]} and {page.page_index})"
-                )
+                errors.append(f"duplicate variable_name '{name}' (pages {seen[name]} and {page.page_index})")
             else:
                 seen[name] = page.page_index

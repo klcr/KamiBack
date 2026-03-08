@@ -34,11 +34,7 @@ class Template(BaseEntity):
 
     def field_variable_names(self) -> list[str]:
         """全フィールドボックスの変数名を返す。"""
-        return [
-            b.variable_name
-            for b in self.all_field_boxes()
-            if b.variable_name is not None
-        ]
+        return [b.variable_name for b in self.all_field_boxes() if b.variable_name is not None]
 
     def get_box(self, box_id: str) -> Box | None:
         """ボックスIDで検索する。"""
