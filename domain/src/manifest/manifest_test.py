@@ -234,3 +234,69 @@ class TestManifestPolicy:
         with pytest.raises(ValidationError) as exc_info:
             validate_manifest(data)
         assert len(exc_info.value.errors) >= 2
+
+
+class TestSampleManifests:
+    """サンプルマニフェストの構造検証テスト。"""
+
+    def test_a4_portrait_validates(self) -> None:
+        from domain.src.manifest.fixtures import make_a4_portrait_manifest
+
+        data = make_a4_portrait_manifest()
+        validate_manifest(data)  # should not raise
+
+    def test_a3_landscape_validates(self) -> None:
+        from domain.src.manifest.fixtures import make_a3_landscape_manifest
+
+        data = make_a3_landscape_manifest()
+        validate_manifest(data)  # should not raise
+
+    def test_a4_portrait_structure(self) -> None:
+        from domain.src.manifest.fixtures import make_a4_portrait_manifest
+
+        data = make_a4_portrait_manifest()
+        m = Manifest(data=data)
+        assert m.template_id == "invoice-a4-001"
+        assert len(m.pages) == 1
+        assert len(m.all_fields()) == 5
+        assert "company_name" in m.all_variable_names()
+        assert "total_amount" in m.all_variable_names()
+        type_map = m.variable_type_map()
+        assert type_map["invoice_date"] == VariableType.DATE
+        assert type_map["total_amount"] == VariableType.NUMBER
+        assert type_map["approved"] == VariableType.BOOLEAN
+
+    def test_a3_landscape_structure(self) -> None:
+        from domain.src.manifest.fixtures import make_a3_landscape_manifest
+
+        data = make_a3_landscape_manifest()
+        m = Manifest(data=data)
+        assert m.template_id == "inspection-a3-001"
+        assert len(m.all_fields()) == 10
+        assert m.get_field("inspector_name") is not None
+        inspector = m.get_field("inspector_name")
+        assert inspector is not None
+        assert inspector.input_type == InputType.HANDWRITTEN_KANA
+
+    def test_a4_portrait_extend(self) -> None:
+        from domain.src.manifest.fixtures import make_a4_portrait_manifest
+
+        data = make_a4_portrait_manifest()
+        m = Manifest(data=data)
+        extended = m.extend()
+        assert extended.is_extended
+        page = extended.get_page(0)
+        assert page is not None
+        assert page.registration_marks is not None
+        assert page.page_identifier is not None
+        assert page.page_identifier.content == "invoice-a4-001/0"
+
+    def test_a3_landscape_coordinates_within_paper(self) -> None:
+        from domain.src.manifest.fixtures import make_a3_landscape_manifest
+
+        data = make_a3_landscape_manifest()
+        for page in data.pages:
+            for field in page.fields:
+                ar = field.absolute_region
+                assert ar.x_mm + ar.width_mm <= page.paper.width_mm
+                assert ar.y_mm + ar.height_mm <= page.paper.height_mm
