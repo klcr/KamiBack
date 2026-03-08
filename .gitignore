@@ -1,6 +1,50 @@
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Environment
+.env
+.env.*
+
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage/
+
+# Type checking
+.mypy_cache/
+.pytype/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
