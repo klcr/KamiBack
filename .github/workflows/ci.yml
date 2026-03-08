@@ -101,8 +101,8 @@ jobs:
       - name: Test
         working-directory: web
         run: |
-          if npx vitest --help > /dev/null 2>&1; then
+          if find src -name '*.test.*' -o -name '*.spec.*' 2>/dev/null | grep -q .; then
             npx vitest run
           else
-            echo "vitest not installed — skipping tests"
+            echo "No test files found — skipping tests"
           fi
