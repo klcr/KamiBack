@@ -29,9 +29,7 @@ def determine_reading_status(
     return ReadingStatus.NEEDS_REVIEW
 
 
-def validate_value_for_type(
-    raw_text: str, variable_type: VariableType
-) -> str | int | float | bool | None:
+def validate_value_for_type(raw_text: str, variable_type: VariableType) -> str | int | float | bool | None:
     """OCR生テキストをvariableTypeに基づいて型変換する。
 
     変換できない場合はNoneを返す（エラーにしない。信頼度で判断する）。

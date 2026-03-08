@@ -46,9 +46,7 @@ def _make_field(
         input_type=InputType.PRINTED,
         box_id=f"p0-box-{name}",
         region=Region(x_mm=x, y_mm=y, width_mm=w, height_mm=h),
-        absolute_region=Region(
-            x_mm=x + 19.05, y_mm=y + 25.4, width_mm=w, height_mm=h
-        ),
+        absolute_region=Region(x_mm=x + 19.05, y_mm=y + 25.4, width_mm=w, height_mm=h),
     )
 
 

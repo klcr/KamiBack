@@ -11,11 +11,7 @@ export type PaperSize = 'A3' | 'A4' | 'A5';
 
 export type Orientation = 'portrait' | 'landscape';
 
-export type InputType =
-  | 'printed'
-  | 'handwritten_number'
-  | 'handwritten_kana'
-  | 'checkbox';
+export type InputType = 'printed' | 'handwritten_number' | 'handwritten_kana' | 'checkbox';
 
 export type VariableType = 'string' | 'number' | 'date' | 'boolean';
 
@@ -95,6 +91,5 @@ export interface Manifest {
  * 全ページにregistrationMarksとpageIdentifierが含まれる。
  */
 export interface ExtendedManifest extends Manifest {
-  readonly pages: readonly (Page &
-    Required<Pick<Page, 'registrationMarks' | 'pageIdentifier'>>)[];
+  readonly pages: readonly (Page & Required<Pick<Page, 'registrationMarks' | 'pageIdentifier'>>)[];
 }
