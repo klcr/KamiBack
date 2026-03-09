@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from api.src.api.routes.templates.serializers import serialize_manifest
 from api.src.infrastructure.html_parser import HtmlParseError
@@ -15,7 +13,7 @@ router = APIRouter()
 
 
 @router.post("/extend")
-async def extend_template_endpoint(file: UploadFile) -> Any:
+async def extend_template_endpoint(file: UploadFile) -> dict[str, object] | Response:
     """HTMLテンプレートをパースし、トンボ・ページ識別コード付きマニフェストを返す。"""
     content = await file.read()
     html = content.decode("utf-8")
