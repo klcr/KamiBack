@@ -2,7 +2,7 @@
  * API クライアント。FastAPI バックエンドとの通信を担当する。
  */
 
-const BASE_URL = '/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export class ApiError extends Error {
   constructor(
