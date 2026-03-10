@@ -78,7 +78,7 @@ def parse_template_metadata(html: str) -> TemplateMetadata:
     for i, page_div in enumerate(page_divs):
         if not isinstance(page_div, Tag):
             continue
-        page_index = int(page_div.get("data-page-index", i)) if isinstance(page_div, Tag) else i
+        page_index = int(str(page_div.get("data-page-index", i))) if isinstance(page_div, Tag) else i
         boxes = _parse_boxes(page_div)
         lines = _parse_lines(page_div)
         horizontal_centered = page_div.get("data-horizontal-centered") == "true"
