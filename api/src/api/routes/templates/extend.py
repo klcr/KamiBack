@@ -12,7 +12,7 @@ from api.src.use_cases.extend_manifest import extend_manifest_from_html
 router = APIRouter()
 
 
-@router.post("/extend")
+@router.post("/extend", response_model=None)
 async def extend_template_endpoint(file: UploadFile) -> dict[str, object] | Response:
     """HTMLテンプレートをパースし、トンボ・ページ識別コード付きマニフェストを返す。"""
     content = await file.read()

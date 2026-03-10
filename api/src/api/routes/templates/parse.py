@@ -11,12 +11,13 @@ from api.src.api.routes.templates.serializers import (
     serialize_variables,
 )
 from api.src.infrastructure.html_parser import HtmlParseError
+from api.src.use_cases.extend_manifest import extend_manifest_from_html
 from api.src.use_cases.parse_template import parse_template
 
 router = APIRouter()
 
 
-@router.post("/parse")
+@router.post("/parse", response_model=None)
 async def parse_template_endpoint(file: UploadFile) -> dict[str, object] | Response:
     """HTMLテンプレートをパースし、マニフェストとメタデータを返す。"""
     content = await file.read()
@@ -24,6 +25,7 @@ async def parse_template_endpoint(file: UploadFile) -> dict[str, object] | Respo
 
     try:
         result = parse_template(html)
+        extended = extend_manifest_from_html(html)
     except HtmlParseError as e:
         return JSONResponse(
             status_code=400,
@@ -31,7 +33,7 @@ async def parse_template_endpoint(file: UploadFile) -> dict[str, object] | Respo
         )
 
     return {
-        "manifest": serialize_manifest(result.manifest),
+        "manifest": serialize_manifest(extended),
         "template": serialize_template_metadata(result.template),
-        "variables": serialize_variables(result.manifest),
+        "variables": serialize_variables(extended),
     }
