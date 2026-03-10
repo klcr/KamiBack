@@ -12,7 +12,11 @@ from typing import Any
 from bs4 import BeautifulSoup, Tag
 
 from domain.src.manifest.manifest_types import (
+    Centering,
     Field,
+    HeaderFooter,
+    HeaderFooterEntry,
+    HeaderFooterSections,
     InputType,
     ManifestData,
     Margins,
@@ -77,7 +81,17 @@ def parse_template_metadata(html: str) -> TemplateMetadata:
         page_index = int(page_div.get("data-page-index", i)) if isinstance(page_div, Tag) else i
         boxes = _parse_boxes(page_div)
         lines = _parse_lines(page_div)
-        pages.append(PageTemplate(page_index=page_index, boxes=tuple(boxes), lines=tuple(lines)))
+        horizontal_centered = page_div.get("data-horizontal-centered") == "true"
+        vertical_centered = page_div.get("data-vertical-centered") == "true"
+        pages.append(
+            PageTemplate(
+                page_index=page_index,
+                boxes=tuple(boxes),
+                lines=tuple(lines),
+                horizontal_centered=horizontal_centered,
+                vertical_centered=vertical_centered,
+            )
+        )
 
     return TemplateMetadata(
         source_html=html,
@@ -91,6 +105,7 @@ def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
     pages: list[Page] = []
     for i, raw_page in enumerate(raw.get("pages", [])):
         raw_paper = raw_page.get("paper", {})
+        raw_centering = raw_paper.get("centering", {})
         paper = Paper(
             size=PaperSize(raw_paper.get("size", "A4")),
             orientation=Orientation(raw_paper.get("orientation", "portrait")),
@@ -101,6 +116,10 @@ def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
                 right=float(raw_paper.get("margins", {}).get("right", 0)),
                 bottom=float(raw_paper.get("margins", {}).get("bottom", 0)),
                 left=float(raw_paper.get("margins", {}).get("left", 0)),
+            ),
+            centering=Centering(
+                horizontal=bool(raw_centering.get("horizontal", False)),
+                vertical=bool(raw_centering.get("vertical", False)),
             ),
         )
         fields: list[Field] = []
@@ -133,6 +152,7 @@ def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
                 page_index=raw_page.get("pageIndex", i),
                 paper=paper,
                 fields=tuple(fields),
+                header_footer=_parse_header_footer(raw_page.get("headerFooter")),
             )
         )
     return ManifestData(
@@ -140,6 +160,34 @@ def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
         version=raw.get("version", ""),
         pages=tuple(pages),
         interface=raw.get("interface", ""),
+    )
+
+
+def _parse_header_footer(raw: dict[str, Any] | None) -> HeaderFooter | None:
+    """headerFooter JSONオブジェクトをパースする。"""
+    if not raw:
+        return None
+
+    def _parse_entry(entry_raw: dict[str, Any] | None) -> HeaderFooterEntry | None:
+        if not entry_raw:
+            return None
+        sections_raw = entry_raw.get("sections", {})
+        return HeaderFooterEntry(
+            raw=entry_raw.get("raw", ""),
+            sections=HeaderFooterSections(
+                left=sections_raw.get("left", ""),
+                center=sections_raw.get("center", ""),
+                right=sections_raw.get("right", ""),
+            ),
+        )
+
+    return HeaderFooter(
+        odd_header=_parse_entry(raw.get("oddHeader")),
+        odd_footer=_parse_entry(raw.get("oddFooter")),
+        even_header=_parse_entry(raw.get("evenHeader")),
+        even_footer=_parse_entry(raw.get("evenFooter")),
+        first_header=_parse_entry(raw.get("firstHeader")),
+        first_footer=_parse_entry(raw.get("firstFooter")),
     )
 
 

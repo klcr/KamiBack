@@ -57,6 +57,8 @@ class PageTemplate:
     page_index: int
     boxes: tuple[Box, ...]
     lines: tuple[Line, ...]
+    horizontal_centered: bool = False
+    vertical_centered: bool = False
 
     @property
     def field_boxes(self) -> list[Box]:

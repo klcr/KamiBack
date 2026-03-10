@@ -24,6 +24,7 @@ def validate_template_manifest_consistency(
     _validate_page_count(template, manifest, errors)
     _validate_variable_names(template, manifest, errors)
     _validate_box_ids(template, manifest, errors)
+    _validate_centering_consistency(template, manifest, errors)
 
     if errors:
         raise ValidationError(errors)
@@ -91,3 +92,22 @@ def _validate_box_ids(
                     f"manifest field '{field.variable_name}' references "
                     f"box_id '{field.box_id}' which does not exist in template HTML"
                 )
+
+
+def _validate_centering_consistency(
+    template: TemplateMetadata,
+    manifest: ManifestData,
+    errors: list[str],
+) -> None:
+    """centering の DOM属性とマニフェストの一致を確認。"""
+    for t_page, m_page in zip(template.pages, manifest.pages, strict=False):
+        if t_page.horizontal_centered != m_page.paper.centering.horizontal:
+            errors.append(
+                f"page {t_page.page_index}: horizontal centering mismatch "
+                f"(HTML: {t_page.horizontal_centered}, manifest: {m_page.paper.centering.horizontal})"
+            )
+        if t_page.vertical_centered != m_page.paper.centering.vertical:
+            errors.append(
+                f"page {t_page.page_index}: vertical centering mismatch "
+                f"(HTML: {t_page.vertical_centered}, manifest: {m_page.paper.centering.vertical})"
+            )

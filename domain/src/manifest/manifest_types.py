@@ -63,6 +63,14 @@ class Margins:
 
 
 @dataclass(frozen=True)
+class Centering:
+    """用紙中央揃え設定。"""
+
+    horizontal: bool = False
+    vertical: bool = False
+
+
+@dataclass(frozen=True)
 class Paper:
     """用紙設定。"""
 
@@ -71,6 +79,7 @@ class Paper:
     width_mm: float
     height_mm: float
     margins: Margins
+    centering: Centering = field(default_factory=Centering)
 
 
 @dataclass(frozen=True)
@@ -114,6 +123,35 @@ class PageIdentifier:
 
 
 @dataclass(frozen=True)
+class HeaderFooterSections:
+    """ヘッダー/フッターの左・中央・右セクション。"""
+
+    left: str = ""
+    center: str = ""
+    right: str = ""
+
+
+@dataclass(frozen=True)
+class HeaderFooterEntry:
+    """ヘッダーまたはフッターの1エントリ（raw文字列 + セクション分割）。"""
+
+    raw: str = ""
+    sections: HeaderFooterSections = field(default_factory=HeaderFooterSections)
+
+
+@dataclass(frozen=True)
+class HeaderFooter:
+    """ヘッダー/フッター定義（6種）。"""
+
+    odd_header: HeaderFooterEntry | None = None
+    odd_footer: HeaderFooterEntry | None = None
+    even_header: HeaderFooterEntry | None = None
+    even_footer: HeaderFooterEntry | None = None
+    first_header: HeaderFooterEntry | None = None
+    first_footer: HeaderFooterEntry | None = None
+
+
+@dataclass(frozen=True)
 class Page:
     """マニフェストの1ページ分。"""
 
@@ -122,6 +160,7 @@ class Page:
     fields: tuple[Field, ...]
     registration_marks: RegistrationMarks | None = None
     page_identifier: PageIdentifier | None = None
+    header_footer: HeaderFooter | None = None
 
     def get_field(self, variable_name: str) -> Field | None:
         """変数名でフィールドを検索する。"""
