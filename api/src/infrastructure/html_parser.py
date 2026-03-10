@@ -83,6 +83,15 @@ def parse_template_metadata(html: str) -> TemplateMetadata:
         lines = _parse_lines(page_div)
         horizontal_centered = page_div.get("data-horizontal-centered") == "true"
         vertical_centered = page_div.get("data-vertical-centered") == "true"
+        paper_size = str(page_div.get("data-paper-size", ""))
+        dom_orientation = str(page_div.get("data-orientation", ""))
+        dom_width_mm = _parse_mm(page_div.get("data-width-mm", "0"))
+        dom_height_mm = _parse_mm(page_div.get("data-height-mm", "0"))
+        dom_margin_top = _parse_mm(page_div.get("data-margin-top-mm", "0"))
+        dom_margin_right = _parse_mm(page_div.get("data-margin-right-mm", "0"))
+        dom_margin_bottom = _parse_mm(page_div.get("data-margin-bottom-mm", "0"))
+        dom_margin_left = _parse_mm(page_div.get("data-margin-left-mm", "0"))
+        origin = str(page_div.get("data-origin", ""))
         pages.append(
             PageTemplate(
                 page_index=page_index,
@@ -90,6 +99,15 @@ def parse_template_metadata(html: str) -> TemplateMetadata:
                 lines=tuple(lines),
                 horizontal_centered=horizontal_centered,
                 vertical_centered=vertical_centered,
+                paper_size=paper_size,
+                orientation=dom_orientation,
+                width_mm=dom_width_mm,
+                height_mm=dom_height_mm,
+                margin_top_mm=dom_margin_top,
+                margin_right_mm=dom_margin_right,
+                margin_bottom_mm=dom_margin_bottom,
+                margin_left_mm=dom_margin_left,
+                origin=origin,
             )
         )
 

@@ -385,3 +385,77 @@ class TestHeaderFooterParsing:
     def test_header_footer_none_when_absent(self) -> None:
         result = parse_manifest_from_html(_SAMPLE_HTML)
         assert result.pages[0].header_footer is None
+
+
+# --- 用紙属性パーステスト ---
+
+_PAPER_ATTRS_HTML = """<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>paper-attrs-test</title></head>
+<body>
+<section class="sheet"
+  data-page-index="0"
+  data-paper-size="A4"
+  data-orientation="portrait"
+  data-width-mm="210"
+  data-height-mm="297"
+  data-margin-top-mm="15.24"
+  data-margin-right-mm="12.7"
+  data-margin-bottom-mm="12.7"
+  data-margin-left-mm="12.7"
+  data-origin="printable-area"
+  style="position: relative; width: 184.6mm; height: 269.06mm;">
+</section>
+<script type="application/json" id="template-manifest">
+{
+  "templateId": "paper-attrs-test",
+  "version": "1.0.0",
+  "pages": [{"pageIndex": 0, "paper": {
+    "size": "A4", "orientation": "portrait",
+    "widthMm": 210, "heightMm": 297,
+    "margins": {"top": 15.24, "right": 12.7, "bottom": 12.7, "left": 12.7}
+  }, "fields": []}]
+}
+</script>
+</body>
+</html>"""
+
+
+class TestPaperAttributesParsing:
+    """用紙属性の DOM パーステスト。"""
+
+    def test_paper_size_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        assert result.pages[0].paper_size == "A4"
+
+    def test_orientation_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        assert result.pages[0].orientation == "portrait"
+
+    def test_dimensions_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        page = result.pages[0]
+        assert page.width_mm == pytest.approx(210.0)
+        assert page.height_mm == pytest.approx(297.0)
+
+    def test_margins_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        page = result.pages[0]
+        assert page.margin_top_mm == pytest.approx(15.24)
+        assert page.margin_right_mm == pytest.approx(12.7)
+        assert page.margin_bottom_mm == pytest.approx(12.7)
+        assert page.margin_left_mm == pytest.approx(12.7)
+
+    def test_origin_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        assert result.pages[0].origin == "printable-area"
+
+    def test_defaults_when_absent(self) -> None:
+        result = parse_template_metadata(_CENTERING_HTML)
+        page = result.pages[0]
+        assert page.paper_size == ""
+        assert page.orientation == ""
+        assert page.width_mm == 0.0
+        assert page.height_mm == 0.0
+        assert page.margin_top_mm == 0.0
+        assert page.origin == ""

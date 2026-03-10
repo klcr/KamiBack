@@ -25,6 +25,7 @@ def validate_template_manifest_consistency(
     _validate_variable_names(template, manifest, errors)
     _validate_box_ids(template, manifest, errors)
     _validate_centering_consistency(template, manifest, errors)
+    _validate_paper_consistency(template, manifest, errors)
 
     if errors:
         raise ValidationError(errors)
@@ -110,4 +111,59 @@ def _validate_centering_consistency(
             errors.append(
                 f"page {t_page.page_index}: vertical centering mismatch "
                 f"(HTML: {t_page.vertical_centered}, manifest: {m_page.paper.centering.vertical})"
+            )
+
+
+def _validate_paper_consistency(
+    template: TemplateMetadata,
+    manifest: ManifestData,
+    errors: list[str],
+) -> None:
+    """用紙属性の DOM属性とマニフェストの一致を確認。
+
+    DOM属性が空文字列/0.0 の場合は未設定とみなしスキップする。
+    """
+    for t_page, m_page in zip(template.pages, manifest.pages, strict=False):
+        paper = m_page.paper
+        idx = t_page.page_index
+
+        if t_page.paper_size and t_page.paper_size != paper.size.value:
+            errors.append(
+                f"page {idx}: paper size mismatch "
+                f"(HTML: {t_page.paper_size}, manifest: {paper.size.value})"
+            )
+        if t_page.orientation and t_page.orientation != paper.orientation.value:
+            errors.append(
+                f"page {idx}: orientation mismatch "
+                f"(HTML: {t_page.orientation}, manifest: {paper.orientation.value})"
+            )
+        if t_page.width_mm and t_page.width_mm != paper.width_mm:
+            errors.append(
+                f"page {idx}: width mismatch "
+                f"(HTML: {t_page.width_mm}, manifest: {paper.width_mm})"
+            )
+        if t_page.height_mm and t_page.height_mm != paper.height_mm:
+            errors.append(
+                f"page {idx}: height mismatch "
+                f"(HTML: {t_page.height_mm}, manifest: {paper.height_mm})"
+            )
+        if t_page.margin_top_mm and t_page.margin_top_mm != paper.margins.top:
+            errors.append(
+                f"page {idx}: margin-top mismatch "
+                f"(HTML: {t_page.margin_top_mm}, manifest: {paper.margins.top})"
+            )
+        if t_page.margin_right_mm and t_page.margin_right_mm != paper.margins.right:
+            errors.append(
+                f"page {idx}: margin-right mismatch "
+                f"(HTML: {t_page.margin_right_mm}, manifest: {paper.margins.right})"
+            )
+        if t_page.margin_bottom_mm and t_page.margin_bottom_mm != paper.margins.bottom:
+            errors.append(
+                f"page {idx}: margin-bottom mismatch "
+                f"(HTML: {t_page.margin_bottom_mm}, manifest: {paper.margins.bottom})"
+            )
+        if t_page.margin_left_mm and t_page.margin_left_mm != paper.margins.left:
+            errors.append(
+                f"page {idx}: margin-left mismatch "
+                f"(HTML: {t_page.margin_left_mm}, manifest: {paper.margins.left})"
             )

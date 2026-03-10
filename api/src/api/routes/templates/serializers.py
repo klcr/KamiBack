@@ -37,6 +37,15 @@ def serialize_template_metadata(meta: TemplateMetadata) -> dict[str, Any]:
                 "pageIndex": p.page_index,
                 "horizontalCentered": p.horizontal_centered,
                 "verticalCentered": p.vertical_centered,
+                "paperSize": p.paper_size,
+                "orientation": p.orientation,
+                "widthMm": p.width_mm,
+                "heightMm": p.height_mm,
+                "marginTopMm": p.margin_top_mm,
+                "marginRightMm": p.margin_right_mm,
+                "marginBottomMm": p.margin_bottom_mm,
+                "marginLeftMm": p.margin_left_mm,
+                "origin": p.origin,
                 "boxes": [
                     {
                         "boxId": b.box_id,
