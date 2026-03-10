@@ -222,6 +222,7 @@ class TestSheetFormatParsing:
         result = parse_template_metadata(_SHEET_HTML)
         box3 = [b for b in result.pages[0].boxes if b.box_id == "p0-box-3"][0]
         from domain.src.template.template_types import BoxRole
+
         assert box3.role == BoxRole.FIELD
 
     def test_all_mustache_variables_detected(self) -> None:
@@ -234,6 +235,7 @@ class TestSheetFormatParsing:
         result = parse_template_metadata(_SHEET_HTML)
         title_box = [b for b in result.pages[0].boxes if b.box_id == "p0-box-1"][0]
         from domain.src.template.template_types import BoxRole
+
         assert title_box.role == BoxRole.LABEL
         assert title_box.variable_name is None
 

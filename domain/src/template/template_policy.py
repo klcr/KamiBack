@@ -128,34 +128,22 @@ def _validate_paper_consistency(
         idx = t_page.page_index
 
         if t_page.paper_size and t_page.paper_size != paper.size.value:
-            errors.append(
-                f"page {idx}: paper size mismatch "
-                f"(HTML: {t_page.paper_size}, manifest: {paper.size.value})"
-            )
+            errors.append(f"page {idx}: paper size mismatch (HTML: {t_page.paper_size}, manifest: {paper.size.value})")
         if t_page.orientation and t_page.orientation != paper.orientation.value:
             errors.append(
-                f"page {idx}: orientation mismatch "
-                f"(HTML: {t_page.orientation}, manifest: {paper.orientation.value})"
+                f"page {idx}: orientation mismatch (HTML: {t_page.orientation}, manifest: {paper.orientation.value})"
             )
         if t_page.width_mm and t_page.width_mm != paper.width_mm:
-            errors.append(
-                f"page {idx}: width mismatch "
-                f"(HTML: {t_page.width_mm}, manifest: {paper.width_mm})"
-            )
+            errors.append(f"page {idx}: width mismatch (HTML: {t_page.width_mm}, manifest: {paper.width_mm})")
         if t_page.height_mm and t_page.height_mm != paper.height_mm:
-            errors.append(
-                f"page {idx}: height mismatch "
-                f"(HTML: {t_page.height_mm}, manifest: {paper.height_mm})"
-            )
+            errors.append(f"page {idx}: height mismatch (HTML: {t_page.height_mm}, manifest: {paper.height_mm})")
         if t_page.margin_top_mm and t_page.margin_top_mm != paper.margins.top:
             errors.append(
-                f"page {idx}: margin-top mismatch "
-                f"(HTML: {t_page.margin_top_mm}, manifest: {paper.margins.top})"
+                f"page {idx}: margin-top mismatch (HTML: {t_page.margin_top_mm}, manifest: {paper.margins.top})"
             )
         if t_page.margin_right_mm and t_page.margin_right_mm != paper.margins.right:
             errors.append(
-                f"page {idx}: margin-right mismatch "
-                f"(HTML: {t_page.margin_right_mm}, manifest: {paper.margins.right})"
+                f"page {idx}: margin-right mismatch (HTML: {t_page.margin_right_mm}, manifest: {paper.margins.right})"
             )
         if t_page.margin_bottom_mm and t_page.margin_bottom_mm != paper.margins.bottom:
             errors.append(
@@ -164,6 +152,5 @@ def _validate_paper_consistency(
             )
         if t_page.margin_left_mm and t_page.margin_left_mm != paper.margins.left:
             errors.append(
-                f"page {idx}: margin-left mismatch "
-                f"(HTML: {t_page.margin_left_mm}, manifest: {paper.margins.left})"
+                f"page {idx}: margin-left mismatch (HTML: {t_page.margin_left_mm}, manifest: {paper.margins.left})"
             )
