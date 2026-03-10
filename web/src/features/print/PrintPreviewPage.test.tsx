@@ -16,6 +16,7 @@ describe('PrintPreviewPage', () => {
           widthMm: 210,
           heightMm: 297,
           margins: { top: 10, right: 10, bottom: 10, left: 10 },
+          centering: { horizontal: false, vertical: false },
         },
         fields: [],
         registrationMarks: {
