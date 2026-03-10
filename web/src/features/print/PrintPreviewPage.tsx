@@ -4,10 +4,12 @@
  * iframe内で帳票をレンダリングし、実際の印刷結果に近いプレビューを表示する。
  */
 
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { ExtendedManifest } from '../../lib/types/manifest';
 import { PageIdCode } from '../template/PageIdCode';
 import { TomboOverlay } from '../template/TomboOverlay';
+import { buildPrintHtml } from './buildPrintHtml';
+import { openPrintWindow } from './openPrintWindow';
 
 interface Props {
   readonly manifest: ExtendedManifest;
@@ -40,6 +42,16 @@ export function PrintPreviewPage({ manifest, boundHtml }: Props) {
 
   const page = manifest.pages[0];
   const paper = page.paper;
+
+  const handlePrint = useCallback(() => {
+    const printHtml = buildPrintHtml({
+      boundHtml,
+      paper,
+      registrationMarks: page.registrationMarks,
+      pageIdentifier: page.pageIdentifier,
+    });
+    openPrintWindow(printHtml);
+  }, [boundHtml, paper, page]);
 
   const htmlForIframe = useMemo(() => {
     // </head> の直前に挿入。<head> が無い場合は先頭に挿入
@@ -77,21 +89,10 @@ export function PrintPreviewPage({ manifest, boundHtml }: Props) {
         <PageIdCode identifier={page.pageIdentifier} />
       </div>
       <div className="print-actions" style={{ textAlign: 'center', marginTop: '16px' }}>
-        <button type="button" onClick={() => window.print()}>
+        <button type="button" onClick={handlePrint}>
           印刷
         </button>
       </div>
-      <style>{`
-        @media print {
-          .print-actions { display: none; }
-          .print-preview > h2 { display: none; }
-          .preview-container { border: none !important; }
-          @page {
-            size: ${paper.widthMm}mm ${paper.heightMm}mm;
-            margin: 0;
-          }
-        }
-      `}</style>
     </div>
   );
 }

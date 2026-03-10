@@ -22,7 +22,7 @@ export function VariableEntryPage({ manifest, html, onBound }: Props) {
     const boundHtml = binding.bindToHtml(html);
     const testValues: Record<string, string> = {};
     for (const b of binding.bindings) {
-      testValues[b.variableName] = b.value;
+      testValues[b.variableName] = b.value || b.variableName;
     }
     onBound(boundHtml, testValues);
   };
@@ -45,11 +45,9 @@ export function VariableEntryPage({ manifest, html, onBound }: Props) {
         >
           プレビューへ
         </button>
-        {!binding.isComplete && (
-          <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999' }}>
-            全フィールドに値を入力してください
-          </span>
-        )}
+        <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999' }}>
+          空欄には変数名がそのまま使われます
+        </span>
       </div>
     </div>
   );

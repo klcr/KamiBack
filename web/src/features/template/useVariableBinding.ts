@@ -70,7 +70,8 @@ export function useVariableBinding(fields: readonly Field[]): UseVariableBinding
     (html: string) => {
       let result = html;
       for (const field of fields) {
-        const formatted = formatValue(values[field.variableName] ?? '', field.variableType);
+        const raw = values[field.variableName] ?? '';
+        const formatted = raw ? formatValue(raw, field.variableType) : field.variableName;
         result = result.replace(new RegExp(`\\{\\{${field.variableName}\\}\\}`, 'g'), formatted);
       }
       return result;
@@ -78,10 +79,7 @@ export function useVariableBinding(fields: readonly Field[]): UseVariableBinding
     [fields, values],
   );
 
-  const isComplete = useMemo(
-    () => fields.length > 0 && fields.every((f) => (values[f.variableName] ?? '').length > 0),
-    [fields, values],
-  );
+  const isComplete = useMemo(() => fields.length > 0, [fields]);
 
   return { bindings, setValue, getFormattedValue, bindToHtml, isComplete };
 }
