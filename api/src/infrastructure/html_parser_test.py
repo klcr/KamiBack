@@ -139,3 +139,111 @@ class TestParseTemplateMetadata:
         box = result.pages[0].boxes[0]
         assert box.region_mm.x_mm == 20.0
         assert box.region_mm.width_mm == 80.0
+
+
+# --- section.sheet 形式 + data-*-mm 属性 + {{変数}} パターンのテスト ---
+
+_SHEET_HTML = """<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>test-a4-light</title></head>
+<body>
+<section class="sheet"
+  data-page-index="0"
+  data-template-id="test-a4-light"
+  data-width-mm="210"
+  data-height-mm="297"
+  style="position: relative; width: 184.6mm; height: 269.06mm;">
+  <div class="box"
+       data-box-id="p0-box-1"
+       data-role="label"
+       data-x-mm="0" data-y-mm="0"
+       data-w-mm="145.53" data-h-mm="10.05"
+       style="position: absolute;">請　求　書</div>
+  <div class="box"
+       data-box-id="p0-box-2"
+       data-role="label"
+       data-x-mm="0" data-y-mm="15.08"
+       data-w-mm="28.91" data-h-mm="6.74"
+       style="position: absolute;">請求日:</div>
+  <div class="box"
+       data-box-id="p0-box-3"
+       data-role="label"
+       data-x-mm="28.91" data-y-mm="15.08"
+       data-w-mm="42.98" data-h-mm="6.74"
+       style="position: absolute;">{{invoiceDate}}</div>
+  <div class="box"
+       data-box-id="p0-box-5"
+       data-role="label"
+       data-x-mm="135.48" data-y-mm="15.08"
+       data-w-mm="10.05" data-h-mm="6.74"
+       style="position: absolute;">{{invoiceNumber}}</div>
+  <div class="line"
+       data-line-id="p0-line-1"
+       data-x1-mm="0" data-y1-mm="10.05"
+       data-x2-mm="145.53" data-y2-mm="10.05"></div>
+</section>
+<script type="application/json" id="template-manifest">
+{
+  "templateId": "test-a4-light",
+  "version": "1.0.0",
+  "pages": [{"pageIndex": 0, "paper": {
+    "size": "A4", "orientation": "portrait",
+    "widthMm": 210, "heightMm": 297,
+    "margins": {"top": 15.24, "right": 12.7, "bottom": 12.7, "left": 12.7}
+  }, "fields": []}],
+  "interface": "interface TemplateData {}"
+}
+</script>
+</body>
+</html>"""
+
+
+class TestSheetFormatParsing:
+    """section.sheet 形式のHTMLテンプレートのパーステスト。"""
+
+    def test_detects_section_sheet_as_page(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        assert result.page_count == 1
+
+    def test_parses_data_mm_attributes(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        box3 = [b for b in result.pages[0].boxes if b.box_id == "p0-box-3"][0]
+        assert box3.region_mm.x_mm == pytest.approx(28.91)
+        assert box3.region_mm.y_mm == pytest.approx(15.08)
+        assert box3.region_mm.width_mm == pytest.approx(42.98)
+        assert box3.region_mm.height_mm == pytest.approx(6.74)
+
+    def test_extracts_mustache_variable_name(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        box3 = [b for b in result.pages[0].boxes if b.box_id == "p0-box-3"][0]
+        assert box3.variable_name == "invoiceDate"
+
+    def test_mustache_box_becomes_field_role(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        box3 = [b for b in result.pages[0].boxes if b.box_id == "p0-box-3"][0]
+        from domain.src.template.template_types import BoxRole
+        assert box3.role == BoxRole.FIELD
+
+    def test_all_mustache_variables_detected(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        field_boxes = result.pages[0].field_boxes
+        var_names = {b.variable_name for b in field_boxes}
+        assert var_names == {"invoiceDate", "invoiceNumber"}
+
+    def test_label_without_mustache_stays_label(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        title_box = [b for b in result.pages[0].boxes if b.box_id == "p0-box-1"][0]
+        from domain.src.template.template_types import BoxRole
+        assert title_box.role == BoxRole.LABEL
+        assert title_box.variable_name is None
+
+    def test_parses_line_with_mm_attributes(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        lines = result.pages[0].lines
+        assert len(lines) == 1
+        assert lines[0].x1_mm == pytest.approx(0.0)
+        assert lines[0].x2_mm == pytest.approx(145.53)
+
+    def test_page_index_from_data_attribute(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        assert result.pages[0].page_index == 0
