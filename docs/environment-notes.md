@@ -36,6 +36,14 @@
 |------|------|------|
 | **ローカルでは通る lint が CI で失敗** | CI はパッケージ全体をスコープとするが、ローカルでは変更ファイルだけ検証しがち | ローカルでも CI と同じスコープで lint を実行する |
 
+## Windows 固有
+
+| 問題 | 原因 | 対策 |
+|------|------|------|
+| **Makefile が動かない** | Unix シェル構文（`[ -f ... ]`, `find` 等）が Windows 非互換 | 個別コマンドを直接実行するか、WSL / Git Bash を使う。詳細は `docs/windows-setup.md` |
+| **PowerShell で `.venv\Scripts\Activate.ps1` が拒否される** | 実行ポリシーがデフォルトで Restricted | `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` で解除 |
+| **C 拡張パッケージのビルド失敗** | Visual C++ Build Tools 未インストール | Build Tools for Visual Studio をインストール |
+
 ## クラウドサービス固有
 
 （使用するクラウドサービスに応じて追記）
