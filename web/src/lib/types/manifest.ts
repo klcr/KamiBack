@@ -42,6 +42,31 @@ export interface Margins {
   readonly left: number;
 }
 
+export interface Centering {
+  readonly horizontal: boolean;
+  readonly vertical: boolean;
+}
+
+export interface HeaderFooterSections {
+  readonly left: string;
+  readonly center: string;
+  readonly right: string;
+}
+
+export interface HeaderFooterEntry {
+  readonly raw: string;
+  readonly sections: HeaderFooterSections;
+}
+
+export interface HeaderFooter {
+  readonly oddHeader?: HeaderFooterEntry;
+  readonly oddFooter?: HeaderFooterEntry;
+  readonly evenHeader?: HeaderFooterEntry;
+  readonly evenFooter?: HeaderFooterEntry;
+  readonly firstHeader?: HeaderFooterEntry;
+  readonly firstFooter?: HeaderFooterEntry;
+}
+
 // --- Manifest Structures ---
 
 export interface Paper {
@@ -50,6 +75,7 @@ export interface Paper {
   readonly widthMm: number;
   readonly heightMm: number;
   readonly margins: Margins;
+  readonly centering: Centering;
 }
 
 export interface Field {
@@ -83,6 +109,7 @@ export interface Page {
   readonly fields: readonly Field[];
   readonly registrationMarks?: RegistrationMarks;
   readonly pageIdentifier?: PageIdentifier;
+  readonly headerFooter?: HeaderFooter;
 }
 
 export interface Manifest {

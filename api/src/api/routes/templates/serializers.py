@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from domain.src.manifest.manifest_types import Field, ManifestData, Page
+from domain.src.manifest.manifest_types import Field, HeaderFooter, ManifestData, Page
 from domain.src.template.template_types import TemplateMetadata
 
 
@@ -35,6 +35,17 @@ def serialize_template_metadata(meta: TemplateMetadata) -> dict[str, Any]:
         "pages": [
             {
                 "pageIndex": p.page_index,
+                "horizontalCentered": p.horizontal_centered,
+                "verticalCentered": p.vertical_centered,
+                "paperSize": p.paper_size,
+                "orientation": p.orientation,
+                "widthMm": p.width_mm,
+                "heightMm": p.height_mm,
+                "marginTopMm": p.margin_top_mm,
+                "marginRightMm": p.margin_right_mm,
+                "marginBottomMm": p.margin_bottom_mm,
+                "marginLeftMm": p.margin_left_mm,
+                "origin": p.origin,
                 "boxes": [
                     {
                         "boxId": b.box_id,
@@ -84,6 +95,10 @@ def _serialize_page(page: Page) -> dict[str, Any]:
                 "bottom": page.paper.margins.bottom,
                 "left": page.paper.margins.left,
             },
+            "centering": {
+                "horizontal": page.paper.centering.horizontal,
+                "vertical": page.paper.centering.vertical,
+            },
         },
         "fields": [_serialize_variable(f) for f in page.fields],
     }
@@ -93,6 +108,8 @@ def _serialize_page(page: Page) -> dict[str, Any]:
             "radiusMm": page.registration_marks.radius_mm,
             "positions": [{"x": p.x_mm, "y": p.y_mm} for p in page.registration_marks.positions],
         }
+    if page.header_footer is not None:
+        result["headerFooter"] = _serialize_header_footer(page.header_footer)
     if page.page_identifier is not None:
         result["pageIdentifier"] = {
             "type": page.page_identifier.type,
@@ -100,6 +117,30 @@ def _serialize_page(page: Page) -> dict[str, Any]:
             "position": {"x": page.page_identifier.position.x_mm, "y": page.page_identifier.position.y_mm},
             "sizeMm": page.page_identifier.size_mm,
         }
+    return result
+
+
+def _serialize_header_footer(hf: HeaderFooter) -> dict[str, Any]:
+    """ヘッダー/フッターをシリアライズ。"""
+    result: dict[str, Any] = {}
+    for attr, key in [
+        ("odd_header", "oddHeader"),
+        ("odd_footer", "oddFooter"),
+        ("even_header", "evenHeader"),
+        ("even_footer", "evenFooter"),
+        ("first_header", "firstHeader"),
+        ("first_footer", "firstFooter"),
+    ]:
+        entry = getattr(hf, attr)
+        if entry is not None:
+            result[key] = {
+                "raw": entry.raw,
+                "sections": {
+                    "left": entry.sections.left,
+                    "center": entry.sections.center,
+                    "right": entry.sections.right,
+                },
+            }
     return result
 
 

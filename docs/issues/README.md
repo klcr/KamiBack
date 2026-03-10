@@ -77,3 +77,4 @@ YYYY-MM-DD
 
 | No. | タイトル | 対象 | 状態 | 起票日 |
 | --- | --- | --- | --- | --- |
+| 001 | [印刷プレビューで水平センタリングが反映されない](reports/001-print-preview-centering-not-applied.md) | web / api / domain | 未解決 | 2026-03-10 |
