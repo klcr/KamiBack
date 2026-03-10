@@ -82,6 +82,8 @@ npx vitest run                   # テスト
 | `TS2741 Property 'X' is missing in type` | TS型に必須プロパティ追加後、テストのリテラルが未更新 | テストファイルのオブジェクトリテラルにプロパティを追加 |
 | `mypy arg-type: Argument has incompatible type` | `Tag.get()` の戻り値 `str \| list[str] \| None` を直接 `int()` 等に渡している | `str()` でラップ |
 | `ruff format` で差分が出る | フォーマット未適用 | `ruff format domain/ api/` を実行 |
+| 印刷で `window.print()` を使うとアプリUI全体が印刷される | `window.print()` はページ全体が対象 | `openPrintWindow` で空ウィンドウを開き `document.write` でHTMLを書き込んで印刷する。blob URL 方式は `load` イベントがナビゲーションで失われるため不可 |
+| 変数入力で空欄フィールドがあると `{{variableName}}` が空になる | `bindToHtml` が空値を空文字に変換していた | 空値の場合は変数名をフォールバックとして差し込む（`useVariableBinding.ts` の `bindToHtml`）|
 
 ## 設計原則
 
