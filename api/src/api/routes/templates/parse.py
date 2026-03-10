@@ -16,7 +16,7 @@ from api.src.use_cases.parse_template import parse_template
 router = APIRouter()
 
 
-@router.post("/parse")
+@router.post("/parse", response_model=None)
 async def parse_template_endpoint(file: UploadFile) -> dict[str, object] | Response:
     """HTMLテンプレートをパースし、マニフェストとメタデータを返す。"""
     content = await file.read()
