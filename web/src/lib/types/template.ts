@@ -4,7 +4,7 @@
  * Python domain/src/template/template_types.py と同期する。
  */
 
-import type { Region } from './manifest';
+import type { HorizontalAlignment, Region, VerticalAlignment } from './manifest';
 
 // --- Enums ---
 
@@ -19,6 +19,8 @@ export interface Box {
   readonly textContent?: string;
   readonly variableName?: string;
   readonly dataType?: string;
+  readonly horizontalAlignment?: HorizontalAlignment;
+  readonly verticalAlignment?: VerticalAlignment;
 }
 
 export interface Line {

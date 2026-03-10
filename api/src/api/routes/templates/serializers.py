@@ -48,6 +48,8 @@ def serialize_template_metadata(meta: TemplateMetadata) -> dict[str, Any]:
                         "textContent": b.text_content,
                         "variableName": b.variable_name,
                         "dataType": b.data_type,
+                        "horizontalAlignment": b.horizontal_alignment.value,
+                        "verticalAlignment": b.vertical_alignment.value,
                     }
                     for b in p.boxes
                 ],
@@ -121,4 +123,6 @@ def _serialize_variable(field: Field) -> dict[str, Any]:
             "width": field.absolute_region.width_mm,
             "height": field.absolute_region.height_mm,
         },
+        "horizontalAlignment": field.horizontal_alignment.value,
+        "verticalAlignment": field.vertical_alignment.value,
     }

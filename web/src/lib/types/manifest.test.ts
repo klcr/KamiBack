@@ -37,4 +37,36 @@ describe('manifest types', () => {
     expect(manifest.pages).toHaveLength(1);
     expect(manifest.pages[0].fields[0].variableName).toBe('company_name');
   });
+
+  it('supports alignment properties on Field', () => {
+    const field: Field = {
+      variableId: 'f-001',
+      variableName: 'amount',
+      variableType: 'number',
+      inputType: 'printed',
+      boxId: 'box-001',
+      region: { x: 20, y: 30, width: 60, height: 10 },
+      absoluteRegion: { x: 30, y: 40, width: 60, height: 10 },
+      horizontalAlignment: 'right',
+      verticalAlignment: 'middle',
+    };
+
+    expect(field.horizontalAlignment).toBe('right');
+    expect(field.verticalAlignment).toBe('middle');
+  });
+
+  it('allows omitting alignment properties (defaults)', () => {
+    const field: Field = {
+      variableId: 'f-001',
+      variableName: 'name',
+      variableType: 'string',
+      inputType: 'printed',
+      boxId: 'box-001',
+      region: { x: 0, y: 0, width: 10, height: 10 },
+      absoluteRegion: { x: 0, y: 0, width: 10, height: 10 },
+    };
+
+    expect(field.horizontalAlignment).toBeUndefined();
+    expect(field.verticalAlignment).toBeUndefined();
+  });
 });

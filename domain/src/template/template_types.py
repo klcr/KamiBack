@@ -19,6 +19,22 @@ class BoxRole(Enum):
     DECORATION = "decoration"
 
 
+class HorizontalAlignment(Enum):
+    """横位置。"""
+
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
+
+
+class VerticalAlignment(Enum):
+    """縦位置。"""
+
+    TOP = "top"
+    MIDDLE = "middle"
+    BOTTOM = "bottom"
+
+
 @dataclass(frozen=True)
 class Box:
     """HTML上の1ボックス（`<div class="box">`）。"""
@@ -29,6 +45,8 @@ class Box:
     text_content: str = ""
     variable_name: str | None = None
     data_type: str | None = None
+    horizontal_alignment: HorizontalAlignment = HorizontalAlignment.LEFT
+    vertical_alignment: VerticalAlignment = VerticalAlignment.TOP
 
     @property
     def is_field(self) -> bool:

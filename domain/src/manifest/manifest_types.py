@@ -52,6 +52,22 @@ class TomboShape(Enum):
     CIRCLE_CROSS = "circle_cross"
 
 
+class HorizontalAlignment(Enum):
+    """横位置。"""
+
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
+
+
+class VerticalAlignment(Enum):
+    """縦位置。"""
+
+    TOP = "top"
+    MIDDLE = "middle"
+    BOTTOM = "bottom"
+
+
 @dataclass(frozen=True)
 class Margins:
     """用紙余白（mm単位）。"""
@@ -84,6 +100,8 @@ class Field:
     box_id: str
     region: Region
     absolute_region: Region
+    horizontal_alignment: HorizontalAlignment = HorizontalAlignment.LEFT
+    vertical_alignment: VerticalAlignment = VerticalAlignment.TOP
 
 
 @dataclass(frozen=True)

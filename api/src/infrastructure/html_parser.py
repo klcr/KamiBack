@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup, Tag
 
 from domain.src.manifest.manifest_types import (
     Field,
+    HorizontalAlignment,
     InputType,
     ManifestData,
     Margins,
@@ -20,14 +21,17 @@ from domain.src.manifest.manifest_types import (
     Paper,
     PaperSize,
     VariableType,
+    VerticalAlignment,
 )
 from domain.src.shared.coordinate import Region
 from domain.src.template.template_types import (
     Box,
     BoxRole,
+    HorizontalAlignment as BoxHorizontalAlignment,
     Line,
     PageTemplate,
     TemplateMetadata,
+    VerticalAlignment as BoxVerticalAlignment,
 )
 
 
@@ -80,6 +84,10 @@ def parse_template_metadata(html: str) -> TemplateMetadata:
     )
 
 
+_VALID_HORIZONTAL = {"left", "center", "right"}
+_VALID_VERTICAL = {"top", "middle", "bottom"}
+
+
 def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
     """生のJSONオブジェクトからManifestDataを構築する。"""
     pages: list[Page] = []
@@ -101,6 +109,12 @@ def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
         for raw_field in raw_page.get("fields", []):
             raw_region = raw_field.get("region", {})
             raw_abs = raw_field.get("absoluteRegion", {})
+
+            h_align_str = raw_field.get("horizontalAlignment", "left")
+            v_align_str = raw_field.get("verticalAlignment", "top")
+            h_align = HorizontalAlignment(h_align_str) if h_align_str in _VALID_HORIZONTAL else HorizontalAlignment.LEFT
+            v_align = VerticalAlignment(v_align_str) if v_align_str in _VALID_VERTICAL else VerticalAlignment.TOP
+
             fields.append(
                 Field(
                     variable_id=raw_field.get("variableId", ""),
@@ -120,6 +134,8 @@ def _build_manifest_data(raw: dict[str, Any]) -> ManifestData:
                         width_mm=float(raw_abs.get("width", 1)),
                         height_mm=float(raw_abs.get("height", 1)),
                     ),
+                    horizontal_alignment=h_align,
+                    vertical_alignment=v_align,
                 )
             )
         pages.append(
@@ -151,6 +167,11 @@ def _parse_boxes(container: Tag) -> list[Box]:
         variable_name = el.get("data-variable") or None
         data_type = el.get("data-type") or None
 
+        h_align_str = _get_str_attr(el, "data-text-align", "left")
+        v_align_str = _get_str_attr(el, "data-vertical-align", "top")
+        h_align = BoxHorizontalAlignment(h_align_str) if h_align_str in _VALID_HORIZONTAL else BoxHorizontalAlignment.LEFT
+        v_align = BoxVerticalAlignment(v_align_str) if v_align_str in _VALID_VERTICAL else BoxVerticalAlignment.TOP
+
         boxes.append(
             Box(
                 box_id=str(box_id),
@@ -159,6 +180,8 @@ def _parse_boxes(container: Tag) -> list[Box]:
                 text_content=el.get_text(strip=True),
                 variable_name=str(variable_name) if variable_name else None,
                 data_type=str(data_type) if data_type else None,
+                horizontal_alignment=h_align,
+                vertical_alignment=v_align,
             )
         )
     return boxes
@@ -190,6 +213,14 @@ def _parse_region_from_style(el: Tag) -> Region:
     w = _parse_mm(el.get("data-width", "1"))
     h = _parse_mm(el.get("data-height", "1"))
     return Region(x_mm=x, y_mm=y, width_mm=w, height_mm=h)
+
+
+def _get_str_attr(el: Tag, attr: str, default: str) -> str:
+    """要素から文字列属性を取得する。リストの場合は先頭要素を返す。"""
+    value = el.get(attr, default)
+    if isinstance(value, list):
+        return str(value[0]) if value else default
+    return str(value)
 
 
 def _parse_mm(value: Any) -> float:

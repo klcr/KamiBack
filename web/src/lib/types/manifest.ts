@@ -17,6 +17,10 @@ export type VariableType = 'string' | 'number' | 'date' | 'boolean';
 
 export type TomboShape = 'circle_cross';
 
+export type HorizontalAlignment = 'left' | 'center' | 'right';
+
+export type VerticalAlignment = 'top' | 'middle' | 'bottom';
+
 // --- Value Objects ---
 
 export interface Point {
@@ -56,6 +60,8 @@ export interface Field {
   readonly boxId: string;
   readonly region: Region;
   readonly absoluteRegion: Region;
+  readonly horizontalAlignment?: HorizontalAlignment;
+  readonly verticalAlignment?: VerticalAlignment;
 }
 
 export interface RegistrationMarks {
