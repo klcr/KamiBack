@@ -37,7 +37,7 @@ def _translate_error(error: str) -> str:
     return error
 
 
-@router.post("/validate")
+@router.post("/validate", response_model=None)
 async def validate_template_endpoint(file: UploadFile) -> dict[str, object] | Response:
     """HTMLテンプレートのマニフェストとDOMの整合性を検証する。"""
     content = await file.read()
