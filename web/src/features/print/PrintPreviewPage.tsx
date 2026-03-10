@@ -15,19 +15,25 @@ interface Props {
 }
 
 /**
- * centering フラグに基づき、iframe 内の section.sheet に適用する CSS を生成する。
+ * iframe 内のシートに適用するベーススタイル。
+ *
+ * - body のデフォルト margin を除去し、用紙全体を正確に表現する
+ * - data-horizontal-centered="true" / data-vertical-centered="true" 属性を
+ *   CSS 属性セレクタで参照し、マニフェストJSONに依存せずDOM属性から直接センタリングを適用
  */
-function buildCenteringStyle(horizontal: boolean, vertical: boolean): string {
-  const rules: string[] = [];
-  if (horizontal) {
-    rules.push('margin-left: auto', 'margin-right: auto');
-  }
-  if (vertical) {
-    rules.push('margin-top: auto', 'margin-bottom: auto');
-  }
-  if (rules.length === 0) return '';
-  return `<style>section.sheet, div.page { ${rules.join('; ')}; }</style>`;
+const IFRAME_BASE_STYLE = `<style>
+body { margin: 0; }
+section.sheet[data-horizontal-centered="true"],
+div.page[data-horizontal-centered="true"] {
+  margin-left: auto;
+  margin-right: auto;
 }
+section.sheet[data-vertical-centered="true"],
+div.page[data-vertical-centered="true"] {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+</style>`;
 
 export function PrintPreviewPage({ manifest, boundHtml }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -35,16 +41,13 @@ export function PrintPreviewPage({ manifest, boundHtml }: Props) {
   const page = manifest.pages[0];
   const paper = page.paper;
 
-  const htmlWithCentering = useMemo(() => {
-    const centering = paper.centering;
-    const styleTag = buildCenteringStyle(centering?.horizontal ?? false, centering?.vertical ?? false);
-    if (!styleTag) return boundHtml;
+  const htmlForIframe = useMemo(() => {
     // </head> の直前に挿入。<head> が無い場合は先頭に挿入
     if (boundHtml.includes('</head>')) {
-      return boundHtml.replace('</head>', `${styleTag}</head>`);
+      return boundHtml.replace('</head>', `${IFRAME_BASE_STYLE}</head>`);
     }
-    return styleTag + boundHtml;
-  }, [boundHtml, paper.centering]);
+    return IFRAME_BASE_STYLE + boundHtml;
+  }, [boundHtml]);
 
   return (
     <div className="print-preview">
@@ -62,7 +65,7 @@ export function PrintPreviewPage({ manifest, boundHtml }: Props) {
       >
         <iframe
           ref={iframeRef}
-          srcDoc={htmlWithCentering}
+          srcDoc={htmlForIframe}
           title="Print Preview"
           style={{ width: '100%', height: '100%', border: 'none' }}
         />
