@@ -58,6 +58,6 @@ describe('VariableEntryPage', () => {
     render(<VariableEntryPage manifest={manifest} html="<p>test</p>" onBound={vi.fn()} />);
     const button = screen.getByText('プレビューへ');
     expect(button).toBeDefined();
-    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect((button as HTMLButtonElement).disabled).toBe(false);
   });
 });

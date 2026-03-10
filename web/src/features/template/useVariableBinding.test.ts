@@ -18,7 +18,7 @@ describe('useVariableBinding', () => {
     const { result } = renderHook(() => useVariableBinding([makeField('name')]));
     expect(result.current.bindings).toHaveLength(1);
     expect(result.current.bindings[0].value).toBe('');
-    expect(result.current.isComplete).toBe(false);
+    expect(result.current.isComplete).toBe(true);
   });
 
   it('sets a value', () => {
@@ -52,10 +52,19 @@ describe('useVariableBinding', () => {
     expect(bound).toBe('<div>テスト</div><div>5,000</div>');
   });
 
-  it('isComplete is false when some values are empty', () => {
+  it('isComplete is true when fields exist regardless of values', () => {
     const fields = [makeField('a'), makeField('b')];
     const { result } = renderHook(() => useVariableBinding(fields));
     act(() => result.current.setValue('a', 'value'));
-    expect(result.current.isComplete).toBe(false);
+    expect(result.current.isComplete).toBe(true);
+  });
+
+  it('bindToHtml uses variable name for empty values', () => {
+    const fields = [makeField('companyName'), makeField('amount', 'number')];
+    const { result } = renderHook(() => useVariableBinding(fields));
+    act(() => result.current.setValue('amount', '5000'));
+    const html = '<div>{{companyName}}</div><div>{{amount}}</div>';
+    const bound = result.current.bindToHtml(html);
+    expect(bound).toBe('<div>companyName</div><div>5,000</div>');
   });
 });
