@@ -36,7 +36,12 @@ function buildPageIdHtml(identifier: PageIdentifier): string {
   return `<div style="position:absolute;left:${identifier.position.x}mm;top:${identifier.position.y}mm;width:${identifier.sizeMm}mm;height:${identifier.sizeMm}mm;border:0.3mm solid black;display:flex;align-items:center;justify-content:center;font-size:1.5mm;font-family:monospace;overflow:hidden;" data-content="${identifier.content}">${identifier.content}</div>`;
 }
 
-export function buildPrintHtml({ boundHtml, paper, registrationMarks, pageIdentifier }: BuildPrintHtmlParams): string {
+export function buildPrintHtml({
+  boundHtml,
+  paper,
+  registrationMarks,
+  pageIdentifier,
+}: BuildPrintHtmlParams): string {
   const tomboSvg = buildTomboSvg(registrationMarks, paper.widthMm, paper.heightMm);
   const pageIdHtml = buildPageIdHtml(pageIdentifier);
 
