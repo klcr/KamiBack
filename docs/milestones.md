@@ -16,13 +16,13 @@
 **完了条件**:
 
 - [x] M1.1: リポジトリ初期化（ディレクトリ構造、CLAUDE.md、ガードレール）
-- [ ] M1.2: Python 開発環境構築（pyproject.toml、venv、linter動作確認）
-- [ ] M1.3: Web 開発環境構築（package.json、vite動作確認）
-- [ ] M1.4: ドメイン共通基盤（entity_base.py, errors.py, coordinate.py）
+- [x] M1.2: Python 開発環境構築（pyproject.toml、venv、linter動作確認）
+- [x] M1.3: Web 開発環境構築（package.json、vite動作確認）
+- [x] M1.4: ドメイン共通基盤（entity_base.py, errors.py, coordinate.py）
 
 **達成基準**: `make lint && make typecheck && make test` が全パス
 
-**達成日**: （未達成）
+**達成日**: 2026-03-08
 
 ---
 
@@ -32,17 +32,17 @@
 
 **完了条件**:
 
-- [ ] M2.1: マニフェスト型定義（`domain/src/manifest/manifest_types.py` — Paper, Field, Page, RegistrationMarks, PageIdentifier）
-- [ ] M2.2: Manifest集約実装（`domain/src/manifest/manifest.py` — パース、フィールド走査、変数一覧取得、拡張マニフェスト生成）
-- [ ] M2.3: バリデーションポリシー（`domain/src/manifest/manifest_policy.py` — 必須フィールド、座標範囲、変数名一意性）
-- [ ] M2.4: テンプレート型定義（`domain/src/template/template_types.py` — Box, Line, TemplateMetadata）
-- [ ] M2.5: Template集約実装（`domain/src/template/template.py` — ボックス一覧、マニフェスト照合）
-- [ ] M2.6: OCR結果型定義（`domain/src/ocr_result/ocr_result_types.py` — Confidence, FieldResult, ReadingStatus）
-- [ ] M2.7: TypeScript型ミラー（`web/src/lib/types/manifest.ts`, `ocr-result.ts`）
+- [x] M2.1: マニフェスト型定義（`domain/src/manifest/manifest_types.py` — Paper, Field, Page, RegistrationMarks, PageIdentifier）
+- [x] M2.2: Manifest集約実装（`domain/src/manifest/manifest.py` — パース、フィールド走査、変数一覧取得、拡張マニフェスト生成）
+- [x] M2.3: バリデーションポリシー（`domain/src/manifest/manifest_policy.py` — 必須フィールド、座標範囲、変数名一意性）
+- [x] M2.4: テンプレート型定義（`domain/src/template/template_types.py` — Box, Line, TemplateMetadata）
+- [x] M2.5: Template集約実装（`domain/src/template/template.py` — ボックス一覧、マニフェスト照合）
+- [x] M2.6: OCR結果型定義（`domain/src/ocr_result/ocr_result_types.py` — Confidence, FieldResult, ReadingStatus）
+- [x] M2.7: TypeScript型ミラー（`web/src/lib/types/manifest.ts`, `ocr-result.ts`）
 
 **達成基準**: サンプルデータでバリデーション通過、ドメインテスト90%+
 
-**達成日**: （未達成）
+**達成日**: 2026-03-08
 
 ---
 
@@ -54,16 +54,16 @@
 
 **完了条件**:
 
-- [ ] M3a.1: HTMLパースAPI（`POST /api/templates/parse` — HTML→マニフェスト＋テンプレートメタデータ）
-- [ ] M3a.2: マニフェスト検証API（`POST /api/templates/validate` — DOM整合性検証）
-- [ ] M3a.3: テンプレート読込UI（HTMLファイルアップロード→APIコール→マニフェスト表示）
-- [ ] M3a.4: 変数一覧表示（変数名・型・配置先一覧）
-- [ ] M3a.5: 変数バインディング（`{{variableName}}`をDOM操作で値に置換、型フォーマット適用）
-- [ ] M3a.6: 印刷プレビュー（トンボなし状態でHTMLをiframeで描画）
+- [x] M3a.1: HTMLパースAPI（`POST /api/templates/parse` — HTML→マニフェスト＋テンプレートメタデータ）
+- [x] M3a.2: マニフェスト検証API（`POST /api/templates/validate` — DOM整合性検証）
+- [x] M3a.3: テンプレート読込UI（HTMLファイルアップロード→APIコール→マニフェスト表示）
+- [x] M3a.4: 変数一覧表示（変数名・型・配置先一覧）
+- [x] M3a.5: 変数バインディング（`{{variableName}}`をDOM操作で値に置換、型フォーマット適用）
+- [x] M3a.6: 印刷プレビュー（トンボなし状態でHTMLをiframeで描画）
 
 **達成基準**: HTMLテンプレート3種を読み込み、変数差し替え→プレビュー表示が正しく動作
 
-**達成日**: （未達成）
+**達成日**: 2026-03-08
 
 ---
 
@@ -75,16 +75,16 @@
 
 **完了条件**:
 
-- [ ] M3b.1: トンボ描画（CSS/SVGで四隅にレジストレーションマーク配置）
-- [ ] M3b.2: ページ識別コード（QRコード/DataMatrixを用紙余白に描画）
-- [ ] M3b.3: 拡張マニフェスト生成（registrationMarks, pageIdentifierの座標計算はPython側で実施済み）
-- [ ] M3b.4: 印刷blob生成（`@page`ルール活用、`window.print()`対応）
-- [ ] M3b.5: 印刷プレビュー完全版（トンボ・ページID含む最終プレビュー）
+- [x] M3b.1: トンボ描画（CSS/SVGで四隅にレジストレーションマーク配置）
+- [x] M3b.2: ページ識別コード（QRコード/DataMatrixを用紙余白に描画）
+- [x] M3b.3: 拡張マニフェスト生成（registrationMarks, pageIdentifierの座標計算はPython側で実施済み）
+- [x] M3b.4: 印刷blob生成（`@page`ルール活用、`window.print()`対応）
+- [x] M3b.5: 印刷プレビュー完全版（トンボ・ページID含む最終プレビュー）
 - [ ] M3b.6: 座標精度検証（印刷物のトンボ位置を実測し±0.5mm以内を確認）
 
 **達成基準**: トンボ付き帳票を印刷し、四隅マークの位置精度が±0.5mm以内
 
-**達成日**: （未達成）
+**達成日**: （未達成 — M3b.6はVG-1検証待ち）
 
 ---
 
@@ -216,10 +216,10 @@
 
 | No. | マイルストーン名 | 対応フェーズ | 状態 | 達成日 |
 | --- | --- | --- | --- | --- |
-| M1 | プロジェクト基盤構築 | P1 | 進行中 | — |
-| M2 | マニフェストJSON仕様策定 | P2 | 進行中 | — |
-| M3a | HTMLパース＋変数バインディング＋プレビュー | P3-Phase1 | 未達成 | — |
-| M3b | トンボ＋ページ識別コード＋印刷 | P3-Phase2 | 未達成 | — |
+| M1 | プロジェクト基盤構築 | P1 | 完了 | 2026-03-08 |
+| M2 | マニフェストJSON仕様策定 | P2 | 完了 | 2026-03-08 |
+| M3a | HTMLパース＋変数バインディング＋プレビュー | P3-Phase1 | 完了 | 2026-03-08 |
+| M3b | トンボ＋ページ識別コード＋印刷 | P3-Phase2 | M3b.6待ち | — |
 | M4a | カメラ撮影＋トンボ検出＋射影変換 | P4-Phase3 | 未達成 | — |
 | **VG-1** | **🚧 座標の往復一貫性検証** | **ゲート** | **未検証** | — |
 | M4b | OCR＋変数格納＋レビューUI | P4-Phase4 | 未達成 | — |
