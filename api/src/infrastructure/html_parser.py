@@ -27,10 +27,14 @@ from domain.src.shared.coordinate import Region
 from domain.src.template.template_types import (
     Box,
     BoxRole,
-    HorizontalAlignment as BoxHorizontalAlignment,
     Line,
     PageTemplate,
     TemplateMetadata,
+)
+from domain.src.template.template_types import (
+    HorizontalAlignment as BoxHorizontalAlignment,
+)
+from domain.src.template.template_types import (
     VerticalAlignment as BoxVerticalAlignment,
 )
 
@@ -169,8 +173,16 @@ def _parse_boxes(container: Tag) -> list[Box]:
 
         h_align_str = _get_str_attr(el, "data-text-align", "left")
         v_align_str = _get_str_attr(el, "data-vertical-align", "top")
-        h_align = BoxHorizontalAlignment(h_align_str) if h_align_str in _VALID_HORIZONTAL else BoxHorizontalAlignment.LEFT
-        v_align = BoxVerticalAlignment(v_align_str) if v_align_str in _VALID_VERTICAL else BoxVerticalAlignment.TOP
+        h_align = (
+            BoxHorizontalAlignment(h_align_str)
+            if h_align_str in _VALID_HORIZONTAL
+            else BoxHorizontalAlignment.LEFT
+        )
+        v_align = (
+            BoxVerticalAlignment(v_align_str)
+            if v_align_str in _VALID_VERTICAL
+            else BoxVerticalAlignment.TOP
+        )
 
         boxes.append(
             Box(

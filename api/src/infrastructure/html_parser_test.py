@@ -12,6 +12,8 @@ from api.src.infrastructure.html_parser import (
 from domain.src.manifest.manifest_types import HorizontalAlignment, VerticalAlignment
 from domain.src.template.template_types import (
     HorizontalAlignment as BoxHorizontalAlignment,
+)
+from domain.src.template.template_types import (
     VerticalAlignment as BoxVerticalAlignment,
 )
 
