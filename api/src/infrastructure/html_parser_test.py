@@ -222,6 +222,7 @@ class TestSheetFormatParsing:
         result = parse_template_metadata(_SHEET_HTML)
         box3 = [b for b in result.pages[0].boxes if b.box_id == "p0-box-3"][0]
         from domain.src.template.template_types import BoxRole
+
         assert box3.role == BoxRole.FIELD
 
     def test_all_mustache_variables_detected(self) -> None:
@@ -234,6 +235,7 @@ class TestSheetFormatParsing:
         result = parse_template_metadata(_SHEET_HTML)
         title_box = [b for b in result.pages[0].boxes if b.box_id == "p0-box-1"][0]
         from domain.src.template.template_types import BoxRole
+
         assert title_box.role == BoxRole.LABEL
         assert title_box.variable_name is None
 
@@ -247,3 +249,215 @@ class TestSheetFormatParsing:
     def test_page_index_from_data_attribute(self) -> None:
         result = parse_template_metadata(_SHEET_HTML)
         assert result.pages[0].page_index == 0
+
+    def test_centering_defaults_to_false(self) -> None:
+        result = parse_template_metadata(_SHEET_HTML)
+        page = result.pages[0]
+        assert page.horizontal_centered is False
+        assert page.vertical_centered is False
+
+
+# --- centering パーステスト ---
+
+_CENTERING_HTML = """<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>centering-test</title></head>
+<body>
+<section class="sheet"
+  data-page-index="0"
+  data-horizontal-centered="true"
+  data-vertical-centered="false"
+  style="position: relative; width: 171.9mm; height: 246.2mm;">
+</section>
+<script type="application/json" id="template-manifest">
+{
+  "templateId": "centering-test",
+  "version": "1.0.0",
+  "pages": [{
+    "pageIndex": 0,
+    "paper": {
+      "size": "A4", "orientation": "portrait",
+      "widthMm": 210, "heightMm": 297,
+      "margins": {"top": 25.4, "right": 19.05, "bottom": 25.4, "left": 19.05},
+      "centering": {"horizontal": true, "vertical": false}
+    },
+    "fields": []
+  }]
+}
+</script>
+</body>
+</html>"""
+
+
+class TestCenteringParsing:
+    """centering パーステスト。"""
+
+    def test_manifest_centering_parsed(self) -> None:
+        result = parse_manifest_from_html(_CENTERING_HTML)
+        centering = result.pages[0].paper.centering
+        assert centering.horizontal is True
+        assert centering.vertical is False
+
+    def test_manifest_centering_defaults_when_absent(self) -> None:
+        result = parse_manifest_from_html(_SAMPLE_HTML)
+        centering = result.pages[0].paper.centering
+        assert centering.horizontal is False
+        assert centering.vertical is False
+
+    def test_dom_centering_parsed(self) -> None:
+        result = parse_template_metadata(_CENTERING_HTML)
+        page = result.pages[0]
+        assert page.horizontal_centered is True
+        assert page.vertical_centered is False
+
+
+# --- headerFooter パーステスト ---
+
+_HEADER_FOOTER_HTML = """<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>hf-test</title></head>
+<body>
+<section class="sheet" data-page-index="0"
+  style="position: relative; width: 171.9mm; height: 246.2mm;">
+</section>
+<script type="application/json" id="template-manifest">
+{
+  "templateId": "hf-test",
+  "version": "1.0.0",
+  "pages": [{
+    "pageIndex": 0,
+    "paper": {
+      "size": "A4", "orientation": "portrait",
+      "widthMm": 210, "heightMm": 297,
+      "margins": {"top": 25.4, "right": 19.05, "bottom": 25.4, "left": 19.05}
+    },
+    "headerFooter": {
+      "oddHeader": {
+        "raw": "&L&\\"Arial,Bold\\"&12ページ &P&C&D&R&F",
+        "sections": {"left": "&\\"Arial,Bold\\"&12ページ &P", "center": "&D", "right": "&F"}
+      },
+      "oddFooter": {
+        "raw": "&Cページ &P / &N",
+        "sections": {"left": "", "center": "ページ &P / &N", "right": ""}
+      }
+    },
+    "fields": []
+  }]
+}
+</script>
+</body>
+</html>"""
+
+
+class TestHeaderFooterParsing:
+    """headerFooter パーステスト。"""
+
+    def test_header_footer_parsed(self) -> None:
+        result = parse_manifest_from_html(_HEADER_FOOTER_HTML)
+        hf = result.pages[0].header_footer
+        assert hf is not None
+        assert hf.odd_header is not None
+        assert hf.odd_footer is not None
+
+    def test_header_footer_sections(self) -> None:
+        result = parse_manifest_from_html(_HEADER_FOOTER_HTML)
+        hf = result.pages[0].header_footer
+        assert hf is not None
+        assert hf.odd_footer is not None
+        assert hf.odd_footer.sections.center == "ページ &P / &N"
+        assert hf.odd_footer.sections.left == ""
+        assert hf.odd_footer.sections.right == ""
+
+    def test_header_footer_raw(self) -> None:
+        result = parse_manifest_from_html(_HEADER_FOOTER_HTML)
+        hf = result.pages[0].header_footer
+        assert hf is not None
+        assert hf.odd_footer is not None
+        assert hf.odd_footer.raw == "&Cページ &P / &N"
+
+    def test_absent_entries_are_none(self) -> None:
+        result = parse_manifest_from_html(_HEADER_FOOTER_HTML)
+        hf = result.pages[0].header_footer
+        assert hf is not None
+        assert hf.even_header is None
+        assert hf.even_footer is None
+        assert hf.first_header is None
+        assert hf.first_footer is None
+
+    def test_header_footer_none_when_absent(self) -> None:
+        result = parse_manifest_from_html(_SAMPLE_HTML)
+        assert result.pages[0].header_footer is None
+
+
+# --- 用紙属性パーステスト ---
+
+_PAPER_ATTRS_HTML = """<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>paper-attrs-test</title></head>
+<body>
+<section class="sheet"
+  data-page-index="0"
+  data-paper-size="A4"
+  data-orientation="portrait"
+  data-width-mm="210"
+  data-height-mm="297"
+  data-margin-top-mm="15.24"
+  data-margin-right-mm="12.7"
+  data-margin-bottom-mm="12.7"
+  data-margin-left-mm="12.7"
+  data-origin="printable-area"
+  style="position: relative; width: 184.6mm; height: 269.06mm;">
+</section>
+<script type="application/json" id="template-manifest">
+{
+  "templateId": "paper-attrs-test",
+  "version": "1.0.0",
+  "pages": [{"pageIndex": 0, "paper": {
+    "size": "A4", "orientation": "portrait",
+    "widthMm": 210, "heightMm": 297,
+    "margins": {"top": 15.24, "right": 12.7, "bottom": 12.7, "left": 12.7}
+  }, "fields": []}]
+}
+</script>
+</body>
+</html>"""
+
+
+class TestPaperAttributesParsing:
+    """用紙属性の DOM パーステスト。"""
+
+    def test_paper_size_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        assert result.pages[0].paper_size == "A4"
+
+    def test_orientation_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        assert result.pages[0].orientation == "portrait"
+
+    def test_dimensions_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        page = result.pages[0]
+        assert page.width_mm == pytest.approx(210.0)
+        assert page.height_mm == pytest.approx(297.0)
+
+    def test_margins_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        page = result.pages[0]
+        assert page.margin_top_mm == pytest.approx(15.24)
+        assert page.margin_right_mm == pytest.approx(12.7)
+        assert page.margin_bottom_mm == pytest.approx(12.7)
+        assert page.margin_left_mm == pytest.approx(12.7)
+
+    def test_origin_parsed(self) -> None:
+        result = parse_template_metadata(_PAPER_ATTRS_HTML)
+        assert result.pages[0].origin == "printable-area"
+
+    def test_defaults_when_absent(self) -> None:
+        result = parse_template_metadata(_CENTERING_HTML)
+        page = result.pages[0]
+        assert page.paper_size == ""
+        assert page.orientation == ""
+        assert page.width_mm == 0.0
+        assert page.height_mm == 0.0
+        assert page.margin_top_mm == 0.0
+        assert page.origin == ""

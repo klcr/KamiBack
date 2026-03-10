@@ -46,7 +46,6 @@ def _merge_dom_variables(
 
     既にマニフェストにfieldsが定義されているページはスキップする。
     """
-    pages_by_index: dict[int, Page] = {p.page_index: p for p in manifest.pages}
     updated_pages: list[Page] = []
 
     for page in manifest.pages:

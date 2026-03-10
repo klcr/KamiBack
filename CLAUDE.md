@@ -53,6 +53,36 @@
 - `make typecheck` — 型チェック（mypy）
 - `lint-imports` — 依存方向違反の検出
 
+## CI チェック項目
+
+コミット前に以下のチェックをすべて通すこと。
+
+### Python（domain / api）
+
+```bash
+ruff check domain/ api/          # lint（未使用変数、import順序等）
+ruff format --check domain/ api/ # フォーマット整合性
+mypy domain/src api/src          # 型チェック
+pytest domain/ api/ -v           # テスト
+```
+
+### TypeScript（web）
+
+```bash
+cd web
+npm run build                    # tsc -b && vite build（型チェック含む）
+npx vitest run                   # テスト
+```
+
+### よくあるエラーと対処
+
+| エラー | 原因 | 対処 |
+|--------|------|------|
+| `F841 Local variable assigned but never used` | 未使用変数 | 変数を削除 |
+| `TS2741 Property 'X' is missing in type` | TS型に必須プロパティ追加後、テストのリテラルが未更新 | テストファイルのオブジェクトリテラルにプロパティを追加 |
+| `mypy arg-type: Argument has incompatible type` | `Tag.get()` の戻り値 `str \| list[str] \| None` を直接 `int()` 等に渡している | `str()` でラップ |
+| `ruff format` で差分が出る | フォーマット未適用 | `ruff format domain/ api/` を実行 |
+
 ## 設計原則
 
 ### コード原則

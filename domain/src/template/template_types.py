@@ -57,6 +57,17 @@ class PageTemplate:
     page_index: int
     boxes: tuple[Box, ...]
     lines: tuple[Line, ...]
+    horizontal_centered: bool = False
+    vertical_centered: bool = False
+    paper_size: str = ""
+    orientation: str = ""
+    width_mm: float = 0.0
+    height_mm: float = 0.0
+    margin_top_mm: float = 0.0
+    margin_right_mm: float = 0.0
+    margin_bottom_mm: float = 0.0
+    margin_left_mm: float = 0.0
+    origin: str = ""
 
     @property
     def field_boxes(self) -> list[Box]:

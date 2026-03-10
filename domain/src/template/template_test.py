@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from domain.src.manifest.manifest_types import (
+    Centering,
     Field,
     InputType,
     ManifestData,
@@ -188,4 +189,198 @@ class TestTemplateManifestConsistency:
             box_ids=["nonexistent-box"],
         )
         with pytest.raises(ValidationError, match="does not exist in template HTML"):
+            validate_template_manifest_consistency(template, manifest)
+
+    def test_centering_consistent(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    horizontal_centered=True,
+                    vertical_centered=False,
+                ),
+            ),
+        )
+        manifest = ManifestData(
+            template_id="invoice-001",
+            version="1.0.0",
+            pages=(
+                Page(
+                    page_index=0,
+                    paper=Paper(
+                        size=PaperSize.A4,
+                        orientation=Orientation.PORTRAIT,
+                        width_mm=210,
+                        height_mm=297,
+                        margins=Margins(top=25.4, right=19.05, bottom=25.4, left=19.05),
+                        centering=Centering(horizontal=True, vertical=False),
+                    ),
+                    fields=_make_manifest_data().pages[0].fields,
+                ),
+            ),
+        )
+        validate_template_manifest_consistency(template, manifest)  # should not raise
+
+    def test_centering_horizontal_mismatch(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    horizontal_centered=True,
+                    vertical_centered=False,
+                ),
+            ),
+        )
+        manifest = ManifestData(
+            template_id="invoice-001",
+            version="1.0.0",
+            pages=(
+                Page(
+                    page_index=0,
+                    paper=Paper(
+                        size=PaperSize.A4,
+                        orientation=Orientation.PORTRAIT,
+                        width_mm=210,
+                        height_mm=297,
+                        margins=Margins(top=25.4, right=19.05, bottom=25.4, left=19.05),
+                        centering=Centering(horizontal=False, vertical=False),
+                    ),
+                    fields=_make_manifest_data().pages[0].fields,
+                ),
+            ),
+        )
+        with pytest.raises(ValidationError, match="horizontal centering mismatch"):
+            validate_template_manifest_consistency(template, manifest)
+
+    def test_centering_vertical_mismatch(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    horizontal_centered=False,
+                    vertical_centered=False,
+                ),
+            ),
+        )
+        manifest = ManifestData(
+            template_id="invoice-001",
+            version="1.0.0",
+            pages=(
+                Page(
+                    page_index=0,
+                    paper=Paper(
+                        size=PaperSize.A4,
+                        orientation=Orientation.PORTRAIT,
+                        width_mm=210,
+                        height_mm=297,
+                        margins=Margins(top=25.4, right=19.05, bottom=25.4, left=19.05),
+                        centering=Centering(horizontal=False, vertical=True),
+                    ),
+                    fields=_make_manifest_data().pages[0].fields,
+                ),
+            ),
+        )
+        with pytest.raises(ValidationError, match="vertical centering mismatch"):
+            validate_template_manifest_consistency(template, manifest)
+
+    def test_paper_size_mismatch(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    paper_size="A3",
+                ),
+            ),
+        )
+        manifest = _make_manifest_data()
+        with pytest.raises(ValidationError, match="paper size mismatch"):
+            validate_template_manifest_consistency(template, manifest)
+
+    def test_paper_consistent(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    paper_size="A4",
+                    orientation="portrait",
+                    width_mm=210,
+                    height_mm=297,
+                    margin_top_mm=25.4,
+                    margin_right_mm=19.05,
+                    margin_bottom_mm=25.4,
+                    margin_left_mm=19.05,
+                ),
+            ),
+        )
+        manifest = _make_manifest_data()
+        validate_template_manifest_consistency(template, manifest)  # should not raise
+
+    def test_paper_attributes_skipped_when_empty(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    # all paper attributes default (empty/0.0) — should be skipped
+                ),
+            ),
+        )
+        manifest = _make_manifest_data()
+        validate_template_manifest_consistency(template, manifest)  # should not raise
+
+    def test_orientation_mismatch(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    orientation="landscape",
+                ),
+            ),
+        )
+        manifest = _make_manifest_data()
+        with pytest.raises(ValidationError, match="orientation mismatch"):
+            validate_template_manifest_consistency(template, manifest)
+
+    def test_margin_mismatch(self) -> None:
+        template = TemplateMetadata(
+            source_html="<html>...</html>",
+            page_count=1,
+            pages=(
+                PageTemplate(
+                    page_index=0,
+                    boxes=_make_template_metadata().pages[0].boxes,
+                    lines=(),
+                    margin_top_mm=99.0,
+                ),
+            ),
+        )
+        manifest = _make_manifest_data()
+        with pytest.raises(ValidationError, match="margin-top mismatch"):
             validate_template_manifest_consistency(template, manifest)

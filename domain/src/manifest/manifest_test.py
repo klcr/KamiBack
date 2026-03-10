@@ -7,7 +7,11 @@ import pytest
 from domain.src.manifest.manifest import Manifest
 from domain.src.manifest.manifest_policy import validate_manifest
 from domain.src.manifest.manifest_types import (
+    Centering,
     Field,
+    HeaderFooter,
+    HeaderFooterEntry,
+    HeaderFooterSections,
     InputType,
     ManifestData,
     Margins,
@@ -300,3 +304,108 @@ class TestSampleManifests:
                 ar = field.absolute_region
                 assert ar.x_mm + ar.width_mm <= page.paper.width_mm
                 assert ar.y_mm + ar.height_mm <= page.paper.height_mm
+
+
+class TestCentering:
+    def test_defaults(self) -> None:
+        c = Centering()
+        assert c.horizontal is False
+        assert c.vertical is False
+
+    def test_paper_with_centering(self) -> None:
+        paper = Paper(
+            size=PaperSize.A4,
+            orientation=Orientation.PORTRAIT,
+            width_mm=210.0,
+            height_mm=297.0,
+            margins=Margins(top=25.4, right=19.05, bottom=25.4, left=19.05),
+            centering=Centering(horizontal=True, vertical=False),
+        )
+        assert paper.centering.horizontal is True
+        assert paper.centering.vertical is False
+
+    def test_paper_centering_defaults(self) -> None:
+        paper = _make_paper_a4_portrait()
+        assert paper.centering.horizontal is False
+        assert paper.centering.vertical is False
+
+
+class TestHeaderFooter:
+    def test_page_with_header_footer(self) -> None:
+        hf = HeaderFooter(
+            odd_footer=HeaderFooterEntry(
+                raw="&Cページ &P / &N",
+                sections=HeaderFooterSections(left="", center="ページ &P / &N", right=""),
+            ),
+        )
+        page = Page(
+            page_index=0,
+            paper=_make_paper_a4_portrait(),
+            fields=(),
+            header_footer=hf,
+        )
+        assert page.header_footer is not None
+        assert page.header_footer.odd_footer is not None
+        assert page.header_footer.odd_footer.sections.center == "ページ &P / &N"
+        assert page.header_footer.odd_header is None
+
+    def test_page_header_footer_defaults_to_none(self) -> None:
+        page = Page(
+            page_index=0,
+            paper=_make_paper_a4_portrait(),
+            fields=(),
+        )
+        assert page.header_footer is None
+
+    def test_extend_preserves_header_footer(self) -> None:
+        hf = HeaderFooter(
+            odd_footer=HeaderFooterEntry(
+                raw="&Cページ &P",
+                sections=HeaderFooterSections(center="ページ &P"),
+            ),
+        )
+        data = ManifestData(
+            template_id="test-hf",
+            version="1.0.0",
+            pages=(
+                Page(
+                    page_index=0,
+                    paper=_make_paper_a4_portrait(),
+                    fields=(_make_field(),),
+                    header_footer=hf,
+                ),
+            ),
+        )
+        m = Manifest(data=data)
+        extended = m.extend()
+        page = extended.get_page(0)
+        assert page is not None
+        assert page.header_footer is not None
+        assert page.header_footer.odd_footer is not None
+        assert page.header_footer.odd_footer.raw == "&Cページ &P"
+
+    def test_extend_preserves_centering(self) -> None:
+        data = ManifestData(
+            template_id="test-centering",
+            version="1.0.0",
+            pages=(
+                Page(
+                    page_index=0,
+                    paper=Paper(
+                        size=PaperSize.A4,
+                        orientation=Orientation.PORTRAIT,
+                        width_mm=210.0,
+                        height_mm=297.0,
+                        margins=Margins(top=25.4, right=19.05, bottom=25.4, left=19.05),
+                        centering=Centering(horizontal=True, vertical=True),
+                    ),
+                    fields=(_make_field(),),
+                ),
+            ),
+        )
+        m = Manifest(data=data)
+        extended = m.extend()
+        page = extended.get_page(0)
+        assert page is not None
+        assert page.paper.centering.horizontal is True
+        assert page.paper.centering.vertical is True
