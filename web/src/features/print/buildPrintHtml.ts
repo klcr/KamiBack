@@ -78,7 +78,8 @@ export function buildPrintHtml({
   const printStyle = `<style>
 @page { size: ${paper.widthMm}mm ${paper.heightMm}mm; margin: 0; }
 @page page0 { margin: ${eq.top}mm ${eq.right}mm ${eq.bottom}mm ${eq.left}mm; }
-body { margin: 0; }
+body { margin: 0; position: relative; }
+* { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .print-container {
   position: relative;
   width: ${paper.widthMm}mm;
@@ -96,7 +97,7 @@ body { margin: 0; }
   }
 
   // boundHtml の </body> 前にオーバーレイを挿入、なければ末尾に追加
-  const overlays = `<div class="print-container" style="position:relative;width:${paper.widthMm}mm;height:${paper.heightMm}mm;">
+  const overlays = `<div class="print-overlay" style="position:absolute;top:0;left:0;width:${paper.widthMm}mm;height:${paper.heightMm}mm;pointer-events:none;">
 ${tomboSvg}
 ${pageIdHtml}
 </div>`;
