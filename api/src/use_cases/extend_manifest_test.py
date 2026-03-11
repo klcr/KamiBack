@@ -104,3 +104,42 @@ class TestExtendManifestDomVariables:
         result = extend_manifest_from_html(_VALID_HTML)
         assert len(result.pages[0].fields) == 1
         assert result.pages[0].fields[0].variable_name == "name"
+
+
+# --- センタリング有効時の absolute_region 補正テスト ---
+
+_CENTERED_HTML = """<!DOCTYPE html>
+<html><body>
+<script id="template-manifest" type="application/json">
+{
+  "templateId": "centered-001",
+  "version": "1.0.0",
+  "pages": [{"pageIndex": 0, "paper": {
+    "size": "A4", "orientation": "portrait", "widthMm": 210, "heightMm": 297,
+    "margins": {"top": 30, "right": 10, "bottom": 20, "left": 20},
+    "centering": {"horizontal": true, "vertical": true}
+  }, "fields": []}]
+}
+</script>
+<section class="sheet" data-page-index="0"
+  data-horizontal-centered="true" data-vertical-centered="true"
+  style="position: relative; width: 180mm; height: 247mm;">
+  <div class="box" data-box-id="p0-box-1" data-role="field"
+       data-x-mm="10" data-y-mm="5" data-w-mm="50" data-h-mm="8"
+       data-variable="name" data-type="string">{{name}}</div>
+</section>
+</body></html>"""
+
+
+class TestExtendManifestCentering:
+    """センタリング有効時に absolute_region が均等化マージンで計算されることを検証。"""
+
+    def test_absolute_region_uses_equalized_margins(self) -> None:
+        result = extend_manifest_from_html(_CENTERED_HTML)
+        field = result.pages[0].fields[0]
+        # 均等化マージン: left = (20 + 10) / 2 = 15, top = (30 + 20) / 2 = 25
+        assert field.absolute_region.x_mm == 10 + 15  # region.x + equalized left
+        assert field.absolute_region.y_mm == 5 + 25  # region.y + equalized top
+        # region（印刷可能領域内座標）は変化しない
+        assert field.region.x_mm == 10
+        assert field.region.y_mm == 5

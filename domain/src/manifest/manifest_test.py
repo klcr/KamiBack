@@ -329,6 +329,59 @@ class TestCentering:
         assert paper.centering.horizontal is False
         assert paper.centering.vertical is False
 
+    def test_effective_margins_no_centering(self) -> None:
+        paper = _make_paper_a4_portrait()
+        em = paper.effective_margins
+        assert em.left == paper.margins.left
+        assert em.right == paper.margins.right
+        assert em.top == paper.margins.top
+        assert em.bottom == paper.margins.bottom
+
+    def test_effective_margins_horizontal(self) -> None:
+        paper = Paper(
+            size=PaperSize.A4,
+            orientation=Orientation.PORTRAIT,
+            width_mm=210.0,
+            height_mm=297.0,
+            margins=Margins(top=25.4, right=10.0, bottom=25.4, left=20.0),
+            centering=Centering(horizontal=True, vertical=False),
+        )
+        em = paper.effective_margins
+        assert em.left == 15.0
+        assert em.right == 15.0
+        assert em.top == 25.4
+        assert em.bottom == 25.4
+
+    def test_effective_margins_vertical(self) -> None:
+        paper = Paper(
+            size=PaperSize.A4,
+            orientation=Orientation.PORTRAIT,
+            width_mm=210.0,
+            height_mm=297.0,
+            margins=Margins(top=30.0, right=19.05, bottom=20.0, left=19.05),
+            centering=Centering(horizontal=False, vertical=True),
+        )
+        em = paper.effective_margins
+        assert em.top == 25.0
+        assert em.bottom == 25.0
+        assert em.left == 19.05
+        assert em.right == 19.05
+
+    def test_effective_margins_both(self) -> None:
+        paper = Paper(
+            size=PaperSize.A4,
+            orientation=Orientation.PORTRAIT,
+            width_mm=210.0,
+            height_mm=297.0,
+            margins=Margins(top=30.0, right=10.0, bottom=20.0, left=20.0),
+            centering=Centering(horizontal=True, vertical=True),
+        )
+        em = paper.effective_margins
+        assert em.left == 15.0
+        assert em.right == 15.0
+        assert em.top == 25.0
+        assert em.bottom == 25.0
+
 
 class TestHeaderFooter:
     def test_page_with_header_footer(self) -> None:

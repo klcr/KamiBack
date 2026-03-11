@@ -72,6 +72,7 @@ pytest domain/ api/ -v           # テスト
 cd web
 npm run build                    # tsc -b && vite build（型チェック含む）
 npx vitest run                   # テスト
+npx biome check                  # フォーマット + lint（Biome）
 ```
 
 ### よくあるエラーと対処

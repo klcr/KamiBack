@@ -86,10 +86,12 @@ def _extract_fields_from_boxes(boxes: list[Box], page: Page) -> list[Field]:
     for box in boxes:
         if box.variable_name is None:
             continue
-        # 印刷可能領域内座標 → 絶対座標（マージン分を加算）
+        # 印刷可能領域内座標 → 絶対座標（実効マージン分を加算）
+        # センタリング有効時はマージンが均等化されるため effective_margins を使用
+        effective = page.paper.effective_margins
         absolute_region = Region(
-            x_mm=box.region_mm.x_mm + page.paper.margins.left,
-            y_mm=box.region_mm.y_mm + page.paper.margins.top,
+            x_mm=box.region_mm.x_mm + effective.left,
+            y_mm=box.region_mm.y_mm + effective.top,
             width_mm=box.region_mm.width_mm,
             height_mm=box.region_mm.height_mm,
         )

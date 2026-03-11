@@ -81,6 +81,23 @@ class Paper:
     margins: Margins
     centering: Centering = field(default_factory=Centering)
 
+    @property
+    def effective_margins(self) -> Margins:
+        """センタリング適用後の実効マージンを返す。
+
+        水平中央揃え: left と right を均等化 → (left + right) / 2
+        垂直中央揃え: top と bottom を均等化 → (top + bottom) / 2
+        印刷可能領域のサイズは変化しない（マージン合計が同一のため）。
+        """
+        eq_h = (self.margins.left + self.margins.right) / 2
+        eq_v = (self.margins.top + self.margins.bottom) / 2
+        return Margins(
+            top=eq_v if self.centering.vertical else self.margins.top,
+            right=eq_h if self.centering.horizontal else self.margins.right,
+            bottom=eq_v if self.centering.vertical else self.margins.bottom,
+            left=eq_h if self.centering.horizontal else self.margins.left,
+        )
+
 
 @dataclass(frozen=True)
 class Field:
