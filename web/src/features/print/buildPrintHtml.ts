@@ -6,11 +6,13 @@
  * 描画ロジックを文字列生成として再実装している。
  */
 
-import type { PageIdentifier, RegistrationMarks } from '../../lib/types/manifest';
+import type { Centering, Margins, PageIdentifier, RegistrationMarks } from '../../lib/types/manifest';
 
 interface BuildPrintHtmlParams {
   readonly boundHtml: string;
   readonly paper: { readonly widthMm: number; readonly heightMm: number };
+  readonly margins: Margins;
+  readonly centering: Centering;
   readonly registrationMarks: RegistrationMarks;
   readonly pageIdentifier: PageIdentifier;
 }
@@ -36,28 +38,42 @@ function buildPageIdHtml(identifier: PageIdentifier): string {
   return `<div style="position:absolute;left:${identifier.position.x}mm;top:${identifier.position.y}mm;width:${identifier.sizeMm}mm;height:${identifier.sizeMm}mm;border:0.3mm solid black;display:flex;align-items:center;justify-content:center;font-size:1.5mm;font-family:monospace;overflow:hidden;" data-content="${identifier.content}">${identifier.content}</div>`;
 }
 
+/**
+ * ページ中央揃え時のマージン均等化を計算する。
+ *
+ * Excel の「ページ中央」設定は、印刷可能領域の位置を用紙中央にシフトさせる。
+ * 水平中央揃え: left と right を均等化 → (left + right) / 2
+ * 垂直中央揃え: top と bottom を均等化 → (top + bottom) / 2
+ * 印刷可能領域のサイズ（幅・高さ）は変化しない。
+ */
+export function equalizeMargins(margins: Margins, centering: Centering): Margins {
+  const eqHorizontal = (margins.left + margins.right) / 2;
+  const eqVertical = (margins.top + margins.bottom) / 2;
+  return {
+    top: centering.vertical ? eqVertical : margins.top,
+    right: centering.horizontal ? eqHorizontal : margins.right,
+    bottom: centering.vertical ? eqVertical : margins.bottom,
+    left: centering.horizontal ? eqHorizontal : margins.left,
+  };
+}
+
 export function buildPrintHtml({
   boundHtml,
   paper,
+  margins,
+  centering,
   registrationMarks,
   pageIdentifier,
 }: BuildPrintHtmlParams): string {
   const tomboSvg = buildTomboSvg(registrationMarks, paper.widthMm, paper.heightMm);
   const pageIdHtml = buildPageIdHtml(pageIdentifier);
 
+  const eq = equalizeMargins(margins, centering);
+
   const printStyle = `<style>
 @page { size: ${paper.widthMm}mm ${paper.heightMm}mm; margin: 0; }
+@page page0 { margin: ${eq.top}mm ${eq.right}mm ${eq.bottom}mm ${eq.left}mm; }
 body { margin: 0; }
-section.sheet[data-horizontal-centered="true"],
-div.page[data-horizontal-centered="true"] {
-  margin-left: auto;
-  margin-right: auto;
-}
-section.sheet[data-vertical-centered="true"],
-div.page[data-vertical-centered="true"] {
-  margin-top: auto;
-  margin-bottom: auto;
-}
 .print-container {
   position: relative;
   width: ${paper.widthMm}mm;
