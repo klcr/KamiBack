@@ -140,4 +140,36 @@ describe('buildPrintHtml', () => {
     expect(html).not.toContain('margin-left: auto');
     expect(html).not.toContain('margin-top: auto');
   });
+
+  it('wraps body content in print-page-wrapper with overlay inside', () => {
+    const templateHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>test</title></head>
+<body>
+<section class="sheet" data-page-index="0"
+  style="position: relative; width: 184.6mm; height: 269.06mm;">
+  <div class="box">content</div>
+</section>
+</body>
+</html>`;
+    const html = buildPrintHtml({ ...params, boundHtml: templateHtml });
+
+    // ラッパーが body 直下に挿入されている
+    expect(html).toContain('<body><div class="print-page-wrapper">');
+    // オーバーレイがラッパー内にある
+    const wrapperStart = html.indexOf('print-page-wrapper');
+    const overlayStart = html.indexOf('print-overlay');
+    const wrapperEnd = html.lastIndexOf('</div></body>');
+    expect(overlayStart).toBeGreaterThan(wrapperStart);
+    expect(overlayStart).toBeLessThan(wrapperEnd);
+    // コンテンツもラッパー内にある
+    expect(html.indexOf('class="sheet"')).toBeGreaterThan(wrapperStart);
+    expect(html.indexOf('class="sheet"')).toBeLessThan(wrapperEnd);
+  });
+
+  it('contains print-color-adjust for background colors', () => {
+    const html = buildPrintHtml(params);
+    expect(html).toContain('print-color-adjust: exact');
+    expect(html).toContain('-webkit-print-color-adjust: exact');
+  });
 });

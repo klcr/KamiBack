@@ -78,9 +78,9 @@ export function buildPrintHtml({
   const printStyle = `<style>
 @page { size: ${paper.widthMm}mm ${paper.heightMm}mm; margin: 0; }
 @page page0 { margin: ${eq.top}mm ${eq.right}mm ${eq.bottom}mm ${eq.left}mm; }
-body { margin: 0; position: relative; }
+body { margin: 0; }
 * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-.print-container {
+.print-page-wrapper {
   position: relative;
   width: ${paper.widthMm}mm;
   height: ${paper.heightMm}mm;
@@ -96,14 +96,21 @@ body { margin: 0; position: relative; }
     htmlWithStyle = printStyle + boundHtml;
   }
 
-  // boundHtml の </body> 前にオーバーレイを挿入、なければ末尾に追加
+  // トンボ・ページIDのオーバーレイ
   const overlays = `<div class="print-overlay" style="position:absolute;top:0;left:0;width:${paper.widthMm}mm;height:${paper.heightMm}mm;pointer-events:none;">
 ${tomboSvg}
 ${pageIdHtml}
 </div>`;
 
+  // body の中身全体を用紙サイズのラッパーで包み、オーバーレイを同一コンテキストに配置する。
+  // ラッパーが position:relative の基準となり、overflow:hidden で1ページに収まる。
+  const wrapperOpen = '<div class="print-page-wrapper">';
+  const wrapperClose = `${overlays}</div>`;
+
   if (htmlWithStyle.includes('</body>')) {
-    return htmlWithStyle.replace('</body>', `${overlays}</body>`);
+    return htmlWithStyle
+      .replace(/<body([^>]*)>/, `<body$1>${wrapperOpen}`)
+      .replace('</body>', `${wrapperClose}</body>`);
   }
-  return htmlWithStyle + overlays;
+  return wrapperOpen + htmlWithStyle + wrapperClose;
 }
