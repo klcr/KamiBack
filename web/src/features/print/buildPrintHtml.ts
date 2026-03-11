@@ -6,7 +6,12 @@
  * 描画ロジックを文字列生成として再実装している。
  */
 
-import type { Centering, Margins, PageIdentifier, RegistrationMarks } from '../../lib/types/manifest';
+import type {
+  Centering,
+  Margins,
+  PageIdentifier,
+  RegistrationMarks,
+} from '../../lib/types/manifest';
 
 interface BuildPrintHtmlParams {
   readonly boundHtml: string;
