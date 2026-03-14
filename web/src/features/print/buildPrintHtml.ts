@@ -77,32 +77,46 @@ export function buildPrintHtml({
 
   const printStyle = `<style>
 @page { size: ${paper.widthMm}mm ${paper.heightMm}mm; margin: 0; }
-@page page0 { margin: ${eq.top}mm ${eq.right}mm ${eq.bottom}mm ${eq.left}mm; }
 body { margin: 0; }
-.print-container {
-  position: relative;
-  width: ${paper.widthMm}mm;
-  height: ${paper.heightMm}mm;
-  overflow: hidden;
+section.sheet[data-page-index="0"],
+div.page[data-page-index="0"] {
+  margin-left: ${eq.left}mm;
+  margin-top: ${eq.top}mm;
 }
 </style>`;
 
-  // boundHtml に <head> がある場合はその中にスタイルを挿入
-  let htmlWithStyle: string;
+  const containerOpen = `<div class="print-container" style="position:relative;width:${paper.widthMm}mm;height:${paper.heightMm}mm;overflow:hidden;">`;
+  const containerClose = `\n${tomboSvg}\n${pageIdHtml}\n</div>`;
+
+  // Case 1: boundHtml に <body> タグがある場合
+  // → style を <head> に挿入（なければ <body> 前に挿入）
+  // → body の中身を print-container でラップし、トンボ・ページIDを同居させる
+  if (/<body[^>]*>/.test(boundHtml)) {
+    let html = boundHtml;
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', `${printStyle}</head>`);
+    } else {
+      html = html.replace(/(<body)/, `${printStyle}$1`);
+    }
+    html = html.replace(/(<body[^>]*>)/, `$1${containerOpen}`);
+    html = html.replace('</body>', `${containerClose}</body>`);
+    return html;
+  }
+
+  // Case 2: <body> タグなし（HTMLフラグメント）
+  // → style を先頭に、boundHtml ごと print-container でラップ
   if (boundHtml.includes('</head>')) {
-    htmlWithStyle = boundHtml.replace('</head>', `${printStyle}</head>`);
-  } else {
-    htmlWithStyle = printStyle + boundHtml;
+    let html = boundHtml.replace('</head>', `${printStyle}</head>`);
+    // </head> 以降のコンテンツを print-container でラップ
+    html = html.replace(/((?:<\/head>))/, `$1${containerOpen}`);
+    // 末尾の </html> があればその前に閉じる、なければ末尾に追加
+    if (html.includes('</html>')) {
+      html = html.replace('</html>', `${containerClose}</html>`);
+    } else {
+      html = html + containerClose;
+    }
+    return html;
   }
 
-  // boundHtml の </body> 前にオーバーレイを挿入、なければ末尾に追加
-  const overlays = `<div class="print-container" style="position:relative;width:${paper.widthMm}mm;height:${paper.heightMm}mm;">
-${tomboSvg}
-${pageIdHtml}
-</div>`;
-
-  if (htmlWithStyle.includes('</body>')) {
-    return htmlWithStyle.replace('</body>', `${overlays}</body>`);
-  }
-  return htmlWithStyle + overlays;
+  return printStyle + containerOpen + boundHtml + containerClose;
 }
