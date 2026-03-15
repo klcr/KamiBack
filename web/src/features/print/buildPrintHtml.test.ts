@@ -109,31 +109,47 @@ describe('buildPrintHtml', () => {
     expect(html).toContain('<title>Test</title>');
   });
 
-  it('applies margins via CSS on sheet/page elements when not centered', () => {
+  it('applies margins via wrapper div when not centered', () => {
     const html = buildPrintHtml(params);
-    expect(html).toContain('margin-left: 19.1mm');
-    expect(html).toContain('margin-top: 25.4mm');
-    expect(html).not.toContain('@page page0');
+    expect(html).toContain('margin-left:19.1mm');
+    expect(html).toContain('margin-top:25.4mm');
+    // margin はセレクタ指定ではなくラッパー div のインラインスタイルで適用
+    expect(html).not.toContain('section.sheet');
+    expect(html).not.toContain('div.page');
   });
 
-  it('applies equalized margins when horizontally centered', () => {
+  it('applies equalized margins via wrapper div when horizontally centered', () => {
     const html = buildPrintHtml({
       ...params,
       margins: { top: 25.4, right: 10, bottom: 25.4, left: 20 },
       centering: { horizontal: true, vertical: false },
     });
-    expect(html).toContain('margin-left: 15mm');
-    expect(html).toContain('margin-top: 25.4mm');
+    expect(html).toContain('margin-left:15mm');
+    expect(html).toContain('margin-top:25.4mm');
   });
 
-  it('applies equalized margins when vertically centered', () => {
+  it('applies equalized margins via wrapper div when vertically centered', () => {
     const html = buildPrintHtml({
       ...params,
       margins: { top: 30, right: 19.1, bottom: 20, left: 19.1 },
       centering: { horizontal: false, vertical: true },
     });
-    expect(html).toContain('margin-left: 19.1mm');
-    expect(html).toContain('margin-top: 25mm');
+    expect(html).toContain('margin-left:19.1mm');
+    expect(html).toContain('margin-top:25mm');
+  });
+
+  it('places margin wrapper inside print-container, overlays outside wrapper', () => {
+    const html = buildPrintHtml(params);
+    // Structure: print-container > margin-wrapper > content ... /margin-wrapper > svg > pageId > /print-container
+    const containerIdx = html.indexOf('print-container');
+    const marginWrapperIdx = html.indexOf('margin-left:19.1mm');
+    const contentIdx = html.indexOf('<div>Hello</div>');
+    const wrapperCloseIdx = html.indexOf('</div>', contentIdx + 1);
+    const svgIdx = html.indexOf('<svg');
+    expect(containerIdx).toBeLessThan(marginWrapperIdx);
+    expect(marginWrapperIdx).toBeLessThan(contentIdx);
+    // SVG (crop marks) should be after the wrapper closes, not inside it
+    expect(wrapperCloseIdx).toBeLessThan(svgIdx);
   });
 
   it('wraps content and overlays in the same print-container', () => {

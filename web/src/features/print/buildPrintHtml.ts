@@ -75,18 +75,16 @@ export function buildPrintHtml({
 
   const eq = equalizeMargins(margins, centering);
 
+  // テンプレート自身の @media print CSS がマージンを上書きする場合があるため、
+  // section.sheet へのセレクタ指定ではなく、独自のラッパー div でマージンを適用する。
+  // これにより、テンプレートの CSS に依存せず確実にマージンが効く。
   const printStyle = `<style>
 @page { size: ${paper.widthMm}mm ${paper.heightMm}mm; margin: 0; }
-body { margin: 0; }
-section.sheet[data-page-index="0"],
-div.page[data-page-index="0"] {
-  margin-left: ${eq.left}mm;
-  margin-top: ${eq.top}mm;
-}
+body { margin: 0 !important; }
 </style>`;
 
-  const containerOpen = `<div class="print-container" style="position:relative;width:${paper.widthMm}mm;height:${paper.heightMm}mm;overflow:hidden;">`;
-  const containerClose = `\n${tomboSvg}\n${pageIdHtml}\n</div>`;
+  const containerOpen = `<div class="print-container" style="position:relative;width:${paper.widthMm}mm;height:${paper.heightMm}mm;overflow:hidden;"><div style="margin-left:${eq.left}mm;margin-top:${eq.top}mm;">`;
+  const containerClose = `</div>\n${tomboSvg}\n${pageIdHtml}\n</div>`;
 
   // Case 1: boundHtml に <body> タグがある場合
   // → style を <head> に挿入（なければ <body> 前に挿入）
