@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from domain.src.manifest.manifest_types import VariableType
+from domain.src.manifest.manifest_types import InputType, VariableType
 from domain.src.ocr_result.ocr_result_types import (
     Confidence,
     FieldResult,
@@ -18,13 +18,35 @@ from domain.src.ocr_result.ocr_result_types import (
 # デフォルトの信頼度閾値
 DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 
+# inputType別の信頼度閾値テーブル（DJ-7）
+# 実測データで調整前提の初期値
+INPUT_TYPE_THRESHOLDS: dict[InputType, float] = {
+    InputType.PRINTED: 0.80,
+    InputType.HANDWRITTEN_NUMBER: 0.60,
+    InputType.HANDWRITTEN_KANA: 0.50,
+    InputType.CHECKBOX: 0.70,
+}
+
+
+def get_threshold_for_input_type(input_type: InputType | None) -> float:
+    """inputTypeに対応する信頼度閾値を返す。未指定時はデフォルト。"""
+    if input_type is None:
+        return DEFAULT_CONFIDENCE_THRESHOLD
+    return INPUT_TYPE_THRESHOLDS.get(input_type, DEFAULT_CONFIDENCE_THRESHOLD)
+
 
 def determine_reading_status(
     confidence: Confidence,
     threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+    input_type: InputType | None = None,
 ) -> ReadingStatus:
-    """信頼度から読取状態を判定する。"""
-    if confidence.score >= threshold:
+    """信頼度から読取状態を判定する。
+
+    input_type指定時はinputType別閾値テーブルの値を優先する。
+    threshold引数は後方互換のために残す。
+    """
+    effective_threshold = get_threshold_for_input_type(input_type) if input_type is not None else threshold
+    if confidence.score >= effective_threshold:
         return ReadingStatus.CONFIRMED
     return ReadingStatus.NEEDS_REVIEW
 
@@ -78,11 +100,12 @@ def build_field_result(
     variable_type: VariableType,
     engine_result: OcrEngineResult,
     confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+    input_type: InputType | None = None,
 ) -> FieldResult:
     """OCRエンジンの出力からFieldResultを構築する。"""
     confidence = Confidence(score=engine_result.confidence)
     value = validate_value_for_type(engine_result.text, variable_type)
-    status = determine_reading_status(confidence, confidence_threshold)
+    status = determine_reading_status(confidence, confidence_threshold, input_type)
 
     # 型変換に失敗した場合はレビュー必須
     if value is None and engine_result.text.strip():

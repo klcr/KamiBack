@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from domain.src.manifest.manifest_types import VariableType
+from domain.src.manifest.manifest_types import InputType, VariableType
 from domain.src.ocr_result.ocr_result import OcrResult
 from domain.src.ocr_result.ocr_result_policy import (
+    INPUT_TYPE_THRESHOLDS,
     build_field_result,
     determine_reading_status,
+    get_threshold_for_input_type,
     validate_value_for_type,
 )
 from domain.src.ocr_result.ocr_result_types import (
@@ -140,6 +142,27 @@ class TestOcrResult:
         assert detailed["amount"]["confidence"] == 0.95
 
 
+class TestGetThresholdForInputType:
+    def test_printed(self) -> None:
+        assert get_threshold_for_input_type(InputType.PRINTED) == 0.80
+
+    def test_handwritten_number(self) -> None:
+        assert get_threshold_for_input_type(InputType.HANDWRITTEN_NUMBER) == 0.60
+
+    def test_handwritten_kana(self) -> None:
+        assert get_threshold_for_input_type(InputType.HANDWRITTEN_KANA) == 0.50
+
+    def test_checkbox(self) -> None:
+        assert get_threshold_for_input_type(InputType.CHECKBOX) == 0.70
+
+    def test_none_returns_default(self) -> None:
+        assert get_threshold_for_input_type(None) == 0.7
+
+    def test_all_input_types_have_threshold(self) -> None:
+        for input_type in InputType:
+            assert input_type in INPUT_TYPE_THRESHOLDS
+
+
 class TestDetermineReadingStatus:
     def test_high_confidence_confirmed(self) -> None:
         assert determine_reading_status(Confidence(0.9)) == ReadingStatus.CONFIRMED
@@ -149,6 +172,33 @@ class TestDetermineReadingStatus:
 
     def test_custom_threshold(self) -> None:
         assert determine_reading_status(Confidence(0.8), threshold=0.9) == ReadingStatus.NEEDS_REVIEW
+
+    def test_printed_high_threshold(self) -> None:
+        # PRINTED閾値は0.80。0.79は NEEDS_REVIEW
+        status_low = determine_reading_status(Confidence(0.79), input_type=InputType.PRINTED)
+        assert status_low == ReadingStatus.NEEDS_REVIEW
+        status_high = determine_reading_status(Confidence(0.80), input_type=InputType.PRINTED)
+        assert status_high == ReadingStatus.CONFIRMED
+
+    def test_handwritten_number_low_threshold(self) -> None:
+        # HANDWRITTEN_NUMBER閾値は0.60
+        status_low = determine_reading_status(Confidence(0.59), input_type=InputType.HANDWRITTEN_NUMBER)
+        assert status_low == ReadingStatus.NEEDS_REVIEW
+        status_high = determine_reading_status(Confidence(0.60), input_type=InputType.HANDWRITTEN_NUMBER)
+        assert status_high == ReadingStatus.CONFIRMED
+
+    def test_handwritten_kana_lowest_threshold(self) -> None:
+        # HANDWRITTEN_KANA閾値は0.50
+        status_low = determine_reading_status(Confidence(0.49), input_type=InputType.HANDWRITTEN_KANA)
+        assert status_low == ReadingStatus.NEEDS_REVIEW
+        status_high = determine_reading_status(Confidence(0.50), input_type=InputType.HANDWRITTEN_KANA)
+        assert status_high == ReadingStatus.CONFIRMED
+
+    def test_input_type_overrides_threshold_arg(self) -> None:
+        # input_type指定時はthreshold引数より優先
+        # HANDWRITTEN_KANA閾値0.50で、threshold=0.90を渡しても0.50が使われる
+        status = determine_reading_status(Confidence(0.55), threshold=0.90, input_type=InputType.HANDWRITTEN_KANA)
+        assert status == ReadingStatus.CONFIRMED
 
 
 class TestValidateValueForType:
@@ -217,6 +267,36 @@ class TestBuildFieldResult:
         )
         assert result.value is None
         assert result.status == ReadingStatus.NEEDS_REVIEW
+
+    def test_with_input_type_printed(self) -> None:
+        # PRINTED閾値0.80: 0.79はNEEDS_REVIEW
+        result = build_field_result(
+            variable_name="code",
+            variable_type=VariableType.STRING,
+            engine_result=OcrEngineResult(text="ABC", confidence=0.79),
+            input_type=InputType.PRINTED,
+        )
+        assert result.status == ReadingStatus.NEEDS_REVIEW
+
+    def test_with_input_type_handwritten_number(self) -> None:
+        # HANDWRITTEN_NUMBER閾値0.60: 0.65はCONFIRMED
+        result = build_field_result(
+            variable_name="amount",
+            variable_type=VariableType.NUMBER,
+            engine_result=OcrEngineResult(text="1000", confidence=0.65),
+            input_type=InputType.HANDWRITTEN_NUMBER,
+        )
+        assert result.status == ReadingStatus.CONFIRMED
+        assert result.value == 1000
+
+    def test_input_type_none_uses_default(self) -> None:
+        # input_type未指定はデフォルト閾値0.7
+        result = build_field_result(
+            variable_name="name",
+            variable_type=VariableType.STRING,
+            engine_result=OcrEngineResult(text="田中", confidence=0.75),
+        )
+        assert result.status == ReadingStatus.CONFIRMED
 
 
 class TestTomboDetectionResult:
