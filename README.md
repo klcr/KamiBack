@@ -29,6 +29,12 @@ cd web
 npm install
 ```
 
+## 外部ツールのセットアップ
+
+| ツール | 用途 | ガイド |
+|--------|------|--------|
+| NDLOCR-Lite | Module B の OCR エンジン | [docs/setup/ndlocr-lite.md](docs/setup/ndlocr-lite.md) |
+
 ## 開発コマンド
 
 | コマンド | 説明 |
