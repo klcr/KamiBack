@@ -10,7 +10,7 @@
 | 全体進捗 | 45% |
 | 完了フェーズ | 2/6 (P1, P2) |
 | ブロッカー | 0 件 |
-| 直近の完了 | P4設計判断9件確定（ADR-004）、フェーズ追跡ドキュメント作成 |
+| 直近の完了 | M4a correct_image UC + POST /api/scan/correct API 実装完了 |
 
 ## フェーズ
 
@@ -19,7 +19,7 @@
 | P1 | プロジェクト基盤構築 | done | 100% | 03-08 | Vitest/tsconfig strict/Biome lint 全セットアップ完了 |
 | P2 | マニフェストJSON仕様策定 | done | 100% | 03-08 | サンプルJSON2種+TS型ミラー+バリデーションテスト完了 |
 | P3 | Module A: 帳票出力エンジン | active | 100% | 03-08 | A-1〜A-8 全実装完了。VG-1検証待ち |
-| P4 | Module B: 帳票読取エンジン | active | 5% | 03-16 | 設計判断確定。M4a実装準備中 |
+| P4 | Module B: 帳票読取エンジン | active | 20% | 03-16 | M4a-1〜10完了（カメラUI除く）。M4b実装準備中 |
 | P5 | レビューUI | not-started | 0% | 03-08 | OCR結果の確認・修正画面 |
 | P6 | 統合テスト・E2E | not-started | 0% | 03-08 | 往復の結合検証 |
 
@@ -41,12 +41,18 @@
 ## 次のアクション
 
 1. VG-1: 座標の往復一貫性を実プリンタ出力で検証する（人間による判定）
-2. P4/M4a: OpenCV + pyzbar 依存追加 → HoughTomboDetector 実装（B-3）
-3. P4/M4a: ImageStorage IF定義 + LocalFileImageStorage 実装
-4. P4/M4a: PerspectiveCorrector + 画像前処理パイプライン（B-4, B-5）
-5. P4/M4a: correct_image ユースケース + API エンドポイント
+2. P4/M4a-11: カメラUI（web/）
+3. P4/M4b: inputType別閾値テーブル + execute_ocr UC + SSE API
 
 ## diff
+
+> 2026-03-16（6回目）
+
+- M4a-9: `correct_image` ユースケース実装（QR検出→トンボ検出→射影変換→前処理→保存）
+- M4a-10: `POST /api/scan/correct` API エンドポイント実装（FastAPI Depends による DI）
+- テスト: 294件全パス（UC 9件 + API 3件を新規追加）
+- ruff / ruff format / mypy / import-linter: 全パス
+- M4a タスク状態: 2,3,8,9,10 を完了に更新
 
 > 2026-03-16（5回目）
 
