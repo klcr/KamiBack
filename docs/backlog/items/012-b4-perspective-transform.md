@@ -1,7 +1,7 @@
 # Backlog 012: B-4: 射影変換（台形補正）
 
 ## 状態
-未着手
+完了
 
 ## 担当
 —
@@ -16,13 +16,13 @@ api/
 前提マイルストーンが未完了
 
 ## 前提条件
-- [ ] B-3（トンボ検出）完了
+- [x] B-3（トンボ検出）完了
 
 ## 実装チェックリスト
-- [ ] PerspectiveCorrector実装
-- [ ] 変換行列算出
-- [ ] 画像補正処理
-- [ ] 補正精度テスト
+- [x] PerspectiveCorrector実装
+- [x] 変換行列算出
+- [x] 画像補正処理
+- [x] 補正精度テスト
 
 ## 着手時の注意事項
 OpenCVのgetPerspectiveTransform + warpPerspectiveを使用する。ニューラルネット不要。

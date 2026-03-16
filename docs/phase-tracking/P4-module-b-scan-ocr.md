@@ -49,13 +49,13 @@
 
 | # | タスク | バックログ | 設計判断 | 状態 | 備考 |
 |---|--------|-----------|---------|------|------|
-| 1 | OpenCV + pyzbar 依存追加 | — | DJ-3, DJ-4 | 未着手 | pyproject.toml |
+| 1 | OpenCV + pyzbar 依存追加 | — | DJ-3, DJ-4 | 完了 | pyproject.toml |
 | 2 | `ImageStorage`インターフェース定義 | — | DJ-8 | 未着手 | domain層 |
 | 3 | `LocalFileImageStorage`実装 | — | DJ-8 | 未着手 | api/infrastructure |
-| 4 | `HoughTomboDetector`実装 | B-3 (011) | DJ-2 | 未着手 | api/infrastructure |
-| 5 | 4点目幾何推定 + 歪み閾値判定 | B-3 (011) | DJ-2 | 未着手 | api/infrastructure |
-| 6 | `PerspectiveCorrector`実装 | B-4 (012) | DJ-1 | 未着手 | api/infrastructure |
-| 7 | 画像前処理パイプライン | B-5 (013) | — | 未着手 | api/infrastructure |
+| 4 | `HoughTomboDetector`実装 | B-3 (011) | DJ-2 | 完了 | api/infrastructure |
+| 5 | 4点目幾何推定 + 歪み閾値判定 | B-3 (011) | DJ-2 | 完了 | api/infrastructure |
+| 6 | `PerspectiveCorrector`実装 | B-4 (012) | DJ-1 | 完了 | api/infrastructure |
+| 7 | 画像前処理パイプライン | B-5 (013) | — | 完了 | api/infrastructure |
 | 8 | QRコード検出 | B-2 (010) | DJ-4, DJ-5 | 未着手 | api/infrastructure |
 | 9 | `correct_image`ユースケース | — | DJ-9 | 未着手 | api/use_cases |
 | 10 | `POST /api/scan/correct` API | — | DJ-9 | 未着手 | api/routes |
