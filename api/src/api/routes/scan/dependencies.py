@@ -5,22 +5,7 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
-
-from api.src.infrastructure.cv.hough_tombo_detector import HoughTomboDetector
-from api.src.infrastructure.cv.image_preprocessor import CvImagePreprocessor
-from api.src.infrastructure.cv.perspective_corrector import CvPerspectiveCorrector
-from api.src.infrastructure.cv.qr_detector import PyzbarQrDetector
-from api.src.infrastructure.storage.local_file_image_storage import (
-    LocalFileImageStorage,
-)
 from domain.src.manifest.manifest_types import ManifestData
-
-
-@lru_cache(maxsize=1)
-def _get_image_storage() -> LocalFileImageStorage:
-    return LocalFileImageStorage()
-
 
 # TODO: ManifestRepositoryから取得するように変更する
 _manifest_lookup: dict[str, ManifestData] = {}
@@ -37,7 +22,20 @@ def get_scan_dependencies() -> dict[str, object]:
     HoughTomboDetectorはpaper_width_mm/paper_height_mmが必要だが、
     リクエスト時点ではQR検出前でテンプレートが不明。
     デフォルトのA4サイズで初期化し、ユースケース内で適切に処理する。
+
+    CV関連のインポートは遅延実行する。cv2等のネイティブ依存が
+    インストールされていない環境でもアプリが起動できるようにするため。
     """
+    from api.src.infrastructure.cv.hough_tombo_detector import HoughTomboDetector
+    from api.src.infrastructure.cv.image_preprocessor import CvImagePreprocessor
+    from api.src.infrastructure.cv.perspective_corrector import (
+        CvPerspectiveCorrector,
+    )
+    from api.src.infrastructure.cv.qr_detector import PyzbarQrDetector
+    from api.src.infrastructure.storage.local_file_image_storage import (
+        LocalFileImageStorage,
+    )
+
     return {
         "qr_detector": PyzbarQrDetector(),
         "tombo_detector": HoughTomboDetector(
@@ -46,6 +44,6 @@ def get_scan_dependencies() -> dict[str, object]:
         ),
         "perspective_corrector": CvPerspectiveCorrector(),
         "image_preprocessor": CvImagePreprocessor(),
-        "image_storage": _get_image_storage(),
+        "image_storage": LocalFileImageStorage(),
         "manifest_lookup": _manifest_lookup,
     }
