@@ -8,6 +8,8 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "beautifulsoup4>=4.12",
     "python-multipart>=0.0.9",
+    "opencv-python-headless>=4.8",
+    "numpy>=1.26",
 ]
 
 [tool.setuptools.packages.find]

@@ -20,6 +20,8 @@ class TomboDetectionResult:
     detected_points: tuple[Point, ...]
     detection_count: int
     estimated_points: tuple[Point, ...] | None = None
+    skew_degree: float | None = None
+    aspect_ratio_error: float | None = None
 
     @property
     def is_sufficient(self) -> bool:
@@ -30,6 +32,15 @@ class TomboDetectionResult:
     def all_four_detected(self) -> bool:
         """4点すべて検出できたか。"""
         return self.detection_count == 4
+
+    @property
+    def four_points(self) -> tuple[Point, ...]:
+        """射影変換に使う4点を返す（検出4点 or 推定込み4点）。"""
+        if self.all_four_detected:
+            return self.detected_points
+        if self.estimated_points is not None:
+            return self.estimated_points
+        return self.detected_points
 
 
 class TomboDetector(ABC):
