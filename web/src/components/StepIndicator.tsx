@@ -2,13 +2,14 @@
  * ステップインジケーター。現在のステップをハイライト表示するパンくず。
  */
 
-export type AppStep = 'upload' | 'bind' | 'preview' | 'capture';
+export type AppStep = 'upload' | 'bind' | 'preview' | 'camera' | 'capture';
 
 const STEPS: readonly { readonly key: AppStep; readonly label: string }[] = [
   { key: 'upload', label: '1. テンプレート' },
   { key: 'bind', label: '2. 変数入力' },
   { key: 'preview', label: '3. 印刷プレビュー' },
-  { key: 'capture', label: '4. 撮影・結果' },
+  { key: 'camera', label: '4. 撮影' },
+  { key: 'capture', label: '5. 結果' },
 ];
 
 interface Props {
