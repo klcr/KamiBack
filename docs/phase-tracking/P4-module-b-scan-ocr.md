@@ -1,6 +1,6 @@
 # P4: Module B — 帳票読取エンジン フェーズ追跡
 
-> 最終更新: 2026-03-16
+> 最終更新: 2026-03-16 (B-6, B-7 完了)
 
 ## 概要
 
@@ -67,9 +67,9 @@
 
 | # | タスク | バックログ | 設計判断 | 状態 | 備考 |
 |---|--------|-----------|---------|------|------|
-| 1 | mm↔pixelスケール係数算出 | B-6 (014) | DJ-1 | 未着手 | api/ |
-| 2 | ボックス切出ロジック | B-6 (014) | DJ-1 | 未着手 | api/ |
-| 3 | `SubprocessOcrEngine`実装 | B-7 (015) | DJ-3 | 未着手 | api/infrastructure |
+| 1 | mm↔pixelスケール係数算出 | B-6 (014) | DJ-1 | 完了 | api/infrastructure/cv/box_cropper.py |
+| 2 | ボックス切出ロジック | B-6 (014) | DJ-1 | 完了 | api/infrastructure/cv/box_cropper.py |
+| 3 | `SubprocessOcrEngine`実装 | B-7 (015) | DJ-3 | 完了 | api/infrastructure/ocr/subprocess_ocr_engine.py |
 | 4 | inputType別閾値テーブル | B-9 (017) | DJ-7 | 未着手 | domain/ |
 | 5 | `determine_reading_status()`にinputType対応追加 | B-9 (017) | DJ-7 | 未着手 | domain/ |
 | 6 | `execute_ocr`ユースケース | — | DJ-9 | 未着手 | api/use_cases |
