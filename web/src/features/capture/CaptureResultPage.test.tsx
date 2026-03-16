@@ -49,9 +49,34 @@ describe('CaptureResultPage', () => {
     ],
   };
 
-  it('renders Module B not-implemented banner', () => {
+  it('renders OCR not-implemented banner', () => {
     render(<CaptureResultPage manifest={manifest} testValues={{ name: 'test' }} />);
-    expect(screen.getByText(/復路（Module B）は未実装です/)).toBeDefined();
+    expect(screen.getByText(/OCR機能（Module B 後半）は未実装です/)).toBeDefined();
+  });
+
+  it('renders correction result when provided', () => {
+    const correctionResult = {
+      imageId: 'img-001',
+      imagePath: '/tmp/img-001.png',
+      templateId: 'test-001',
+      pageIndex: 0,
+      tombo: {
+        detectionCount: 4,
+        hasEstimation: false,
+        skewDegree: 1.2,
+        aspectRatioError: 0.5,
+      },
+      scalePxPerMm: 10.0,
+    };
+    render(
+      <CaptureResultPage
+        manifest={manifest}
+        testValues={{ name: 'test' }}
+        correctionResult={correctionResult}
+      />,
+    );
+    expect(screen.getByText('画像補正完了')).toBeDefined();
+    expect(screen.getByText(/トンボ検出: 4点/)).toBeDefined();
   });
 
   it('renders comparison table with test values', () => {

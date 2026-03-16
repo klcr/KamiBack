@@ -6,13 +6,15 @@
 
 import { type ChangeEvent, useState } from 'react';
 import type { ExtendedManifest } from '../../lib/types/manifest';
+import type { CorrectionResult } from './captureApi';
 
 interface Props {
   readonly manifest: ExtendedManifest;
   readonly testValues: Record<string, string>;
+  readonly correctionResult?: CorrectionResult | null;
 }
 
-export function CaptureResultPage({ manifest, testValues }: Props) {
+export function CaptureResultPage({ manifest, testValues, correctionResult }: Props) {
   const [images, setImages] = useState<{ name: string; url: string }[]>([]);
   const fields = manifest.pages[0].fields;
 
@@ -31,6 +33,28 @@ export function CaptureResultPage({ manifest, testValues }: Props) {
     <div>
       <h2 style={{ fontSize: '16px', marginBottom: '12px' }}>撮影結果</h2>
 
+      {correctionResult && (
+        <div
+          style={{
+            padding: '12px',
+            background: '#e8f5e9',
+            border: '1px solid #a5d6a7',
+            marginBottom: '16px',
+            fontSize: '14px',
+          }}
+        >
+          <strong>画像補正完了</strong>
+          <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
+            <li>トンボ検出: {correctionResult.tombo.detectionCount}点</li>
+            <li>歪み角度: {correctionResult.tombo.skewDegree.toFixed(1)}°</li>
+            <li>アスペクト比誤差: {correctionResult.tombo.aspectRatioError.toFixed(1)}%</li>
+            {correctionResult.tombo.hasEstimation && (
+              <li style={{ color: '#e65100' }}>※ 4点目は推定値です</li>
+            )}
+          </ul>
+        </div>
+      )}
+
       <div
         style={{
           padding: '12px',
@@ -40,7 +64,7 @@ export function CaptureResultPage({ manifest, testValues }: Props) {
           fontSize: '14px',
         }}
       >
-        復路（Module B）は未実装です。画像アップロードの確認のみ行えます。
+        OCR機能（Module B 後半）は未実装です。画像補正結果の確認のみ行えます。
       </div>
 
       <section style={{ marginBottom: '24px' }}>
