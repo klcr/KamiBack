@@ -25,7 +25,7 @@ async def parse_template_endpoint(file: UploadFile) -> dict[str, object] | Respo
 
     try:
         result = parse_template(html)
-        extended = extend_manifest_from_html(html)
+        extended = extend_manifest_from_html(html, parsed=result)
     except HtmlParseError as e:
         return JSONResponse(
             status_code=400,

@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-import cv2
-import numpy as np
+if TYPE_CHECKING:
+    import numpy as np
 
 from domain.src.manifest.manifest_types import ManifestData, Page
 from domain.src.ocr_result.image_preprocessor import ImagePreprocessor
@@ -147,6 +148,9 @@ def correct_image(
 
 def _decode_image(image_bytes: bytes) -> np.ndarray:
     """バイト列をOpenCV画像に変換する。"""
+    import cv2
+    import numpy as np
+
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if img is None:
@@ -159,6 +163,8 @@ def _decode_image(image_bytes: bytes) -> np.ndarray:
 
 def _encode_image(image: np.ndarray) -> bytes:
     """OpenCV画像をPNGバイト列にエンコードする。"""
+    import cv2
+
     success, buf = cv2.imencode(".png", image)
     if not success:
         raise CorrectImageError(

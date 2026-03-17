@@ -9,8 +9,7 @@ from dataclasses import dataclass
 
 from api.src.infrastructure.html_parser import (
     HtmlParseError,
-    parse_manifest_from_html,
-    parse_template_metadata,
+    parse_html,
 )
 from domain.src.manifest.manifest_types import ManifestData
 from domain.src.template.template_types import TemplateMetadata
@@ -33,7 +32,6 @@ def parse_template(html: str) -> ParseTemplateResult:
     if not html.strip():
         raise HtmlParseError("HTMLが空です")
 
-    manifest = parse_manifest_from_html(html)
-    template = parse_template_metadata(html)
+    manifest, template = parse_html(html)
 
     return ParseTemplateResult(manifest=manifest, template=template)
