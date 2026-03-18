@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CaptureApiError, type CorrectionResult, correctImage } from './captureApi';
+import {
+  CaptureApiError,
+  type CorrectionResult,
+  type OcrResult,
+  correctImage,
+  executeOcr,
+} from './captureApi';
 
 describe('correctImage', () => {
   const mockResult: CorrectionResult = {
@@ -98,5 +104,78 @@ describe('correctImage', () => {
       expect(err.message).toBe('QRコードが検出できませんでした');
       expect(err.userAction).toBe('帳票全体が写るように撮り直してください');
     }
+  });
+});
+
+describe('executeOcr', () => {
+  const mockOcrResult: OcrResult = {
+    templateId: 'test-001',
+    pageIndex: 0,
+    fieldResults: [
+      {
+        variableName: 'company_name',
+        variableType: 'string',
+        value: '株式会社テスト',
+        rawText: '株式会社テスト',
+        confidence: 0.92,
+        status: 'confirmed',
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('sends JSON request and returns OCR result', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockOcrResult),
+    } as Response);
+
+    const result = await executeOcr({
+      imageId: 'img-001',
+      templateId: 'test-001',
+      pageIndex: 0,
+      scalePxPerMm: 10.0,
+    });
+
+    expect(fetch).toHaveBeenCalledOnce();
+    const [url, options] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe('/api/scan/ocr');
+    expect(options?.method).toBe('POST');
+    expect(options?.headers).toEqual({ 'Content-Type': 'application/json' });
+
+    const body = JSON.parse(options?.body as string);
+    expect(body.image_id).toBe('img-001');
+    expect(body.template_id).toBe('test-001');
+    expect(body.scale_px_per_mm).toBe(10.0);
+
+    expect(result).toEqual(mockOcrResult);
+  });
+
+  it('throws CaptureApiError on failure', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () =>
+        Promise.resolve({
+          error: 'テンプレートが見つかりません',
+          userAction: '登録済みのテンプレートで印刷した帳票を使用してください',
+        }),
+    } as Response);
+
+    await expect(
+      executeOcr({
+        imageId: 'img-001',
+        templateId: 'unknown',
+        pageIndex: 0,
+        scalePxPerMm: 10.0,
+      }),
+    ).rejects.toThrow(CaptureApiError);
   });
 });
