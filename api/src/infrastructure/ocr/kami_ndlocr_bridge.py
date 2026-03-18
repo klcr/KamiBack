@@ -36,7 +36,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
+logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
 # NDLOCR-Lite の src ディレクトリ
@@ -99,12 +99,17 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
             logger.error("NDLOCR-Lite Python not found: %s", NDLOCR_PYTHON)
             return "", 0.0
 
+        logger.info("NDLOCR-Lite starting: %s", " ".join(cmd))
+
         try:
             stdout, stderr = proc.communicate(timeout=NDLOCR_TIMEOUT)
         except subprocess.TimeoutExpired:
             _kill_process_group(proc)
             logger.error("NDLOCR-Lite timed out after %ds", NDLOCR_TIMEOUT)
             return "", 0.0
+
+        if stderr:
+            logger.info("NDLOCR-Lite stderr: %s", stderr.strip()[:500])
 
         if proc.returncode != 0:
             logger.error(
@@ -114,7 +119,9 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
             )
             return "", 0.0
 
-        return parse_ndlocr_output(tmpdir)
+        result = parse_ndlocr_output(tmpdir)
+        logger.info("NDLOCR-Lite result: text=%r, confidence=%.2f", result[0][:50], result[1])
+        return result
 
 
 def _kill_process_group(proc: subprocess.Popen[str]) -> None:

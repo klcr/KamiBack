@@ -120,10 +120,13 @@ class SubprocessOcrEngine(OcrEngine):
             _kill_process_group(proc)
             raise OcrEngineError(f"OCRエンジンがタイムアウトしました（{self._timeout}秒）") from e
 
+        if stderr:
+            logger.warning("OCR engine stderr: %s", stderr.strip()[:500])
+
         if proc.returncode != 0:
-            logger.error("OCR engine stderr: %s", stderr)
             raise OcrEngineError(f"OCRエンジンがエラーで終了しました（code={proc.returncode}）: {stderr[:200]}")
 
+        logger.debug("OCR engine stdout: %s", stdout.strip()[:200])
         return stdout
 
     def _build_command(self) -> list[str]:
