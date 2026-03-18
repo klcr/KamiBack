@@ -93,113 +93,16 @@ NDLOCR-Lite はこのプロトコルに直接対応していないため、**ラ
 | `text` | string | OCR 認識テキスト |
 | `confidence` | float | 信頼度スコア（0.0〜1.0） |
 
-### ラッパースクリプトの例
+### ラッパースクリプト
 
-以下は NDLOCR-Lite を KamiBack のプロトコルに接続するラッパースクリプトのテンプレート。
-実際の実装は NDLOCR-Lite の出力フォーマット（XML）に合わせて調整が必要。
+`scripts/kami_ndlocr_bridge.py` に実装済み。
+NDLOCR-Lite の XML 出力（`OCRDATASET > PAGE > TEXTBLOCK > LINE` 構造）をパースし、
+`LINE` 要素の `STRING` 属性からテキスト、`CONF` 属性から信頼度を抽出する。
 
-```python
-#!/usr/bin/env python3
-"""KamiBack ↔ NDLOCR-Lite ブリッジスクリプト。
+テストは `scripts/kami_ndlocr_bridge_test.py` で実行できる。
 
-SubprocessOcrEngine から呼び出され、NDLOCR-Lite の OCR 結果を
-JSON プロトコルに変換して返す。
-
-使い方:
-    export KAMI_OCR_ENGINE_PATH=/path/to/kami_ndlocr_bridge.py
-"""
-
-import json
-import os
-import subprocess
-import sys
-import tempfile
-import xml.etree.ElementTree as ET
-
-# NDLOCR-Lite の ocr.py のパス
-NDLOCR_LITE_DIR = os.environ.get(
-    "NDLOCR_LITE_DIR",
-    os.path.expanduser("~/ndlocr-lite/src"),
-)
-
-
-def run_ndlocr(image_path: str) -> tuple[str, float]:
-    """NDLOCR-Lite を実行し、テキストと信頼度を返す。"""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        proc = subprocess.run(
-            [
-                sys.executable,
-                os.path.join(NDLOCR_LITE_DIR, "ocr.py"),
-                "--sourceimg", image_path,
-                "--output", tmpdir,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-        if proc.returncode != 0:
-            print(
-                json.dumps({"text": "", "confidence": 0.0}),
-                flush=True,
-            )
-            return "", 0.0
-
-        # NDLOCR-Lite の出力 XML をパースしてテキストを抽出
-        text, confidence = parse_ndlocr_output(tmpdir)
-        return text, confidence
-
-
-def parse_ndlocr_output(output_dir: str) -> tuple[str, float]:
-    """NDLOCR-Lite の XML 出力からテキストと信頼度を抽出する。
-
-    TODO: NDLOCR-Lite の実際の XML スキーマに合わせて実装する。
-    以下はプレースホルダー実装。
-    """
-    # output_dir 内の XML ファイルを探す
-    xml_files = [
-        f for f in os.listdir(output_dir)
-        if f.endswith(".xml")
-    ]
-
-    if not xml_files:
-        return "", 0.0
-
-    # 最初の XML を読む
-    tree = ET.parse(os.path.join(output_dir, xml_files[0]))
-    root = tree.getroot()
-
-    # テキストを結合（実際の要素名は NDLOCR-Lite の出力に合わせて調整）
-    texts = []
-    for elem in root.iter():
-        if elem.text and elem.text.strip():
-            texts.append(elem.text.strip())
-
-    text = " ".join(texts)
-
-    # NDLOCR-Lite は信頼度スコアを直接出力しない場合がある
-    # その場合はテキストの有無で暫定的にスコアを設定する
-    confidence = 0.8 if text else 0.0
-
-    return text, confidence
-
-
-def main() -> None:
-    request = json.loads(sys.stdin.read())
-    image_path = request["image_path"]
-    # input_type は将来のエンジン切替に使用（現時点では未使用）
-    # input_type = request.get("input_type", "printed")
-
-    text, confidence = run_ndlocr(image_path)
-
-    print(
-        json.dumps({"text": text, "confidence": confidence}, ensure_ascii=False),
-        flush=True,
-    )
-
-
-if __name__ == "__main__":
-    main()
+```bash
+pytest scripts/kami_ndlocr_bridge_test.py -v
 ```
 
 ### 環境変数の設定
