@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import tempfile
 from typing import Any
 
@@ -94,8 +95,9 @@ class SubprocessOcrEngine(OcrEngine):
     def _call_engine(self, stdin_data: str) -> str:
         """サブプロセスを実行してstdoutを返す。"""
         try:
+            cmd = self._build_command()
             proc = subprocess.run(
-                [self._engine_path],
+                cmd,
                 input=stdin_data,
                 capture_output=True,
                 text=True,
@@ -111,6 +113,16 @@ class SubprocessOcrEngine(OcrEngine):
             raise OcrEngineError(f"OCRエンジンがエラーで終了しました（code={proc.returncode}）: {proc.stderr[:200]}")
 
         return proc.stdout
+
+    def _build_command(self) -> list[str]:
+        """実行コマンドを組み立てる。
+
+        Windowsではシバンが機能しないため、sys.executableで明示的に
+        Pythonインタープリタを指定する。
+        """
+        if sys.platform == "win32":
+            return [sys.executable, self._engine_path]
+        return [self._engine_path]
 
 
 def _parse_response(stdout: str) -> OcrEngineResult:

@@ -5,10 +5,32 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from domain.src.manifest.manifest_types import ManifestData
+
+if TYPE_CHECKING:
+    from api.src.infrastructure.storage.local_file_image_storage import (
+        LocalFileImageStorage,
+    )
 
 # TODO: ManifestRepositoryから取得するように変更する
 _manifest_lookup: dict[str, ManifestData] = {}
+
+# ImageStorageはリクエスト間で共有する必要がある（correctで保存→ocrで読込）
+_image_storage: LocalFileImageStorage | None = None
+
+
+def _get_image_storage() -> LocalFileImageStorage:
+    """ImageStorageのシングルトンインスタンスを返す。"""
+    global _image_storage  # noqa: PLW0603
+    if _image_storage is None:
+        from api.src.infrastructure.storage.local_file_image_storage import (
+            LocalFileImageStorage,
+        )
+
+        _image_storage = LocalFileImageStorage()
+    return _image_storage
 
 
 def register_manifest(manifest: ManifestData) -> None:
@@ -33,9 +55,6 @@ def get_scan_dependencies() -> dict[str, object]:
     )
     from api.src.infrastructure.cv.qr_detector import PyzbarQrDetector
     from api.src.infrastructure.ocr.subprocess_ocr_engine import SubprocessOcrEngine
-    from api.src.infrastructure.storage.local_file_image_storage import (
-        LocalFileImageStorage,
-    )
 
     return {
         "qr_detector": PyzbarQrDetector(),
@@ -45,7 +64,7 @@ def get_scan_dependencies() -> dict[str, object]:
         ),
         "perspective_corrector": CvPerspectiveCorrector(),
         "image_preprocessor": CvImagePreprocessor(),
-        "image_storage": LocalFileImageStorage(),
+        "image_storage": _get_image_storage(),
         "manifest_lookup": _manifest_lookup,
         "ocr_engine": SubprocessOcrEngine(),
     }
