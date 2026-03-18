@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -87,13 +88,21 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
         ]
 
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=NDLOCR_TIMEOUT,
+                start_new_session=True,
             )
+        except FileNotFoundError:
+            logger.error("NDLOCR-Lite Python not found: %s", NDLOCR_PYTHON)
+            return "", 0.0
+
+        try:
+            stdout, stderr = proc.communicate(timeout=NDLOCR_TIMEOUT)
         except subprocess.TimeoutExpired:
+            _kill_process_group(proc)
             logger.error("NDLOCR-Lite timed out after %ds", NDLOCR_TIMEOUT)
             return "", 0.0
 
@@ -101,11 +110,26 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
             logger.error(
                 "NDLOCR-Lite failed (code=%d): %s",
                 proc.returncode,
-                proc.stderr[:500],
+                stderr[:500],
             )
             return "", 0.0
 
         return parse_ndlocr_output(tmpdir)
+
+
+def _kill_process_group(proc: subprocess.Popen[str]) -> None:
+    """プロセスグループ全体を kill する。"""
+    try:
+        if sys.platform == "win32":
+            proc.kill()
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
 
 
 def parse_ndlocr_output(output_dir: str) -> tuple[str, float]:

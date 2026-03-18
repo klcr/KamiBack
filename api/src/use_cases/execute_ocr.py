@@ -101,7 +101,12 @@ def execute_ocr(
     cropper = BoxCropper(scale_px_per_mm=scale_px_per_mm)
     field_results: list[FieldResult] = []
 
-    for field_def in page.fields:
+    total_fields = len(page.fields)
+    for i, field_def in enumerate(page.fields, 1):
+        from domain.src.manifest.manifest_types import Field
+
+        assert isinstance(field_def, Field)
+        logger.info("OCR field %d/%d: %s", i, total_fields, field_def.variable_name)
         field_result = _process_field(
             field_def=field_def,
             image=image,
@@ -109,6 +114,13 @@ def execute_ocr(
             ocr_engine=ocr_engine,
         )
         field_results.append(field_result)
+        logger.info(
+            "OCR field %d/%d done: %s (status=%s)",
+            i,
+            total_fields,
+            field_def.variable_name,
+            field_result.status.value,
+        )
 
     return ExecuteOcrResult(
         template_id=template_id,

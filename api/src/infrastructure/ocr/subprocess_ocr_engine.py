@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -93,26 +94,37 @@ class SubprocessOcrEngine(OcrEngine):
             _cleanup_temp(tmp_path)
 
     def _call_engine(self, stdin_data: str) -> str:
-        """サブプロセスを実行してstdoutを返す。"""
+        """サブプロセスを実行してstdoutを返す。
+
+        start_new_session=True でプロセスグループを分離し、
+        タイムアウト時はグループ全体を kill する。
+        NDLOCR-Lite が生成する子プロセス（PyTorch推論ワーカー等）が
+        パイプを保持してハングする問題を防ぐ。
+        """
+        cmd = self._build_command()
         try:
-            cmd = self._build_command()
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
-                input=stdin_data,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=self._timeout,
+                start_new_session=True,
             )
         except FileNotFoundError as e:
             raise OcrEngineError(f"OCRエンジンが見つかりません: {self._engine_path}") from e
+
+        try:
+            stdout, stderr = proc.communicate(input=stdin_data, timeout=self._timeout)
         except subprocess.TimeoutExpired as e:
+            _kill_process_group(proc)
             raise OcrEngineError(f"OCRエンジンがタイムアウトしました（{self._timeout}秒）") from e
 
         if proc.returncode != 0:
-            logger.error("OCR engine stderr: %s", proc.stderr)
-            raise OcrEngineError(f"OCRエンジンがエラーで終了しました（code={proc.returncode}）: {proc.stderr[:200]}")
+            logger.error("OCR engine stderr: %s", stderr)
+            raise OcrEngineError(f"OCRエンジンがエラーで終了しました（code={proc.returncode}）: {stderr[:200]}")
 
-        return proc.stdout
+        return stdout
 
     def _build_command(self) -> list[str]:
         """実行コマンドを組み立てる。
@@ -123,6 +135,24 @@ class SubprocessOcrEngine(OcrEngine):
         if sys.platform == "win32":
             return [sys.executable, self._engine_path]
         return [self._engine_path]
+
+
+def _kill_process_group(proc: subprocess.Popen[str]) -> None:
+    """プロセスグループ全体を kill する。
+
+    start_new_session=True で起動したプロセスとその子孫すべてを終了させる。
+    """
+    try:
+        if sys.platform == "win32":
+            proc.kill()
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
 
 
 def _parse_response(stdout: str) -> OcrEngineResult:
