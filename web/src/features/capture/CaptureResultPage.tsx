@@ -1,12 +1,18 @@
 /**
  * 撮影結果ページ。
  *
- * 撮影画像のアップロードとOCR結果の確認（Module B未実装のためプレースホルダー）。
+ * 画像補正結果の表示 + OCR実行 + 結果の確認。
  */
 
 import { type ChangeEvent, useState } from 'react';
-import type { ExtendedManifest } from '../../lib/types/manifest';
-import type { CorrectionResult } from './captureApi';
+import type { ExtendedManifest, Field } from '../../lib/types/manifest';
+import {
+  CaptureApiError,
+  type CorrectionResult,
+  type FieldResultDto,
+  type OcrResult,
+  executeOcr,
+} from './captureApi';
 
 interface Props {
   readonly manifest: ExtendedManifest;
@@ -16,6 +22,9 @@ interface Props {
 
 export function CaptureResultPage({ manifest, testValues, correctionResult }: Props) {
   const [images, setImages] = useState<{ name: string; url: string }[]>([]);
+  const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [ocrError, setOcrError] = useState<string | null>(null);
   const fields = manifest.pages[0].fields;
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -27,6 +36,72 @@ export function CaptureResultPage({ manifest, testValues, correctionResult }: Pr
       newImages.push({ name: file.name, url: URL.createObjectURL(file) });
     }
     setImages((prev) => [...prev, ...newImages]);
+  };
+
+  const handleExecuteOcr = async () => {
+    if (!correctionResult) return;
+
+    setOcrStatus('running');
+    setOcrError(null);
+
+    try {
+      const result = await executeOcr({
+        imageId: correctionResult.imageId,
+        templateId: correctionResult.templateId,
+        pageIndex: correctionResult.pageIndex,
+        scalePxPerMm: correctionResult.scalePxPerMm,
+      });
+      setOcrResult(result);
+      setOcrStatus('done');
+    } catch (err) {
+      if (err instanceof CaptureApiError) {
+        setOcrError(err.userAction);
+      } else {
+        setOcrError('OCRの実行に失敗しました。通信環境を確認してください。');
+      }
+      setOcrStatus('error');
+    }
+  };
+
+  const findFieldResult = (variableName: string): FieldResultDto | undefined => {
+    return ocrResult?.fieldResults.find((fr) => fr.variableName === variableName);
+  };
+
+  const statusLabel = (status: string): string => {
+    switch (status) {
+      case 'confirmed':
+        return 'OK';
+      case 'needs_review':
+        return '要確認';
+      case 'failed':
+        return '失敗';
+      case 'corrected':
+        return '修正済';
+      default:
+        return status;
+    }
+  };
+
+  const statusColor = (status: string): string => {
+    switch (status) {
+      case 'confirmed':
+        return '#2e7d32';
+      case 'needs_review':
+        return '#e65100';
+      case 'failed':
+        return '#c62828';
+      case 'corrected':
+        return '#1565c0';
+      default:
+        return '#666';
+    }
+  };
+
+  const rowBackground = (fr: FieldResultDto | undefined, inputVal: string): string => {
+    if (!fr) return 'transparent';
+    if (inputVal === fr.rawText) return '#e8f5e9';
+    if (fr.status === 'failed') return '#fce4ec';
+    return '#fff3e0';
   };
 
   return (
@@ -46,8 +121,19 @@ export function CaptureResultPage({ manifest, testValues, correctionResult }: Pr
           <strong>画像補正完了</strong>
           <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
             <li>トンボ検出: {correctionResult.tombo.detectionCount}点</li>
-            <li>歪み角度: {correctionResult.tombo.skewDegree != null ? `${correctionResult.tombo.skewDegree.toFixed(1)}°` : '--'}</li>
-            <li>アスペクト比誤差: {correctionResult.tombo.aspectRatioError != null ? `${correctionResult.tombo.aspectRatioError.toFixed(1)}%` : '--'}</li>
+            <li>
+              歪み角度:{' '}
+              {correctionResult.tombo.skewDegree != null
+                ? `${correctionResult.tombo.skewDegree.toFixed(1)}°`
+                : '--'}
+            </li>
+            <li>
+              アスペクト比誤差:{' '}
+              {correctionResult.tombo.aspectRatioError != null
+                ? `${correctionResult.tombo.aspectRatioError.toFixed(1)}%`
+                : '--'}
+            </li>
+            <li>スケール: {correctionResult.scalePxPerMm.toFixed(2)} px/mm</li>
             {correctionResult.tombo.hasEstimation && (
               <li style={{ color: '#e65100' }}>※ 4点目は推定値です</li>
             )}
@@ -55,45 +141,73 @@ export function CaptureResultPage({ manifest, testValues, correctionResult }: Pr
         </div>
       )}
 
-      <div
-        style={{
-          padding: '12px',
-          background: '#fff3e0',
-          border: '1px solid #ffcc80',
-          marginBottom: '16px',
-          fontSize: '14px',
-        }}
-      >
-        OCR機能（Module B 後半）は未実装です。画像補正結果の確認のみ行えます。
-      </div>
+      {/* OCR実行ボタン */}
+      {correctionResult && ocrStatus !== 'done' && (
+        <div style={{ marginBottom: '16px' }}>
+          <button
+            type="button"
+            onClick={handleExecuteOcr}
+            disabled={ocrStatus === 'running'}
+            style={{
+              padding: '10px 24px',
+              background: ocrStatus === 'running' ? '#ccc' : '#1a73e8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              cursor: ocrStatus === 'running' ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {ocrStatus === 'running' ? 'OCR実行中...' : 'OCRを実行'}
+          </button>
+        </div>
+      )}
 
-      <section style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>画像アップロード</h3>
-        <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
-          印刷した帳票の写真をアップロードしてください（正対、やや斜め、照明ムラの3枚）
-        </p>
-        <input type="file" accept="image/*" multiple onChange={handleImageChange} />
+      {ocrError && (
+        <div
+          style={{
+            padding: '12px',
+            background: '#fce4ec',
+            border: '1px solid #ef9a9a',
+            marginBottom: '16px',
+            fontSize: '14px',
+          }}
+        >
+          {ocrError}
+        </div>
+      )}
 
-        {images.length > 0 && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-            {images.map((img) => (
-              <div key={img.name} style={{ textAlign: 'center' }}>
-                <img
-                  src={img.url}
-                  alt={img.name}
-                  style={{
-                    width: '160px',
-                    height: '120px',
-                    objectFit: 'cover',
-                    border: '1px solid #ccc',
-                  }}
-                />
-                <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>{img.name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {!correctionResult && (
+        <section style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>画像アップロード</h3>
+          <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
+            印刷した帳票の写真をアップロードしてください（正対、やや斜め、照明ムラの3枚）
+          </p>
+          <input type="file" accept="image/*" multiple onChange={handleImageChange} />
+
+          {images.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+              {images.map((img) => (
+                <div key={img.name} style={{ textAlign: 'center' }}>
+                  <img
+                    src={img.url}
+                    alt={img.name}
+                    style={{
+                      width: '160px',
+                      height: '120px',
+                      objectFit: 'cover',
+                      border: '1px solid #ccc',
+                    }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                    {img.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section>
         <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>入力値と読取結果の比較</h3>
@@ -103,21 +217,68 @@ export function CaptureResultPage({ manifest, testValues, correctionResult }: Pr
               <th style={{ textAlign: 'left', padding: '4px 8px' }}>変数名</th>
               <th style={{ textAlign: 'left', padding: '4px 8px' }}>入力値</th>
               <th style={{ textAlign: 'left', padding: '4px 8px' }}>OCR結果</th>
+              <th style={{ textAlign: 'right', padding: '4px 8px' }}>信頼度</th>
               <th style={{ textAlign: 'left', padding: '4px 8px' }}>ステータス</th>
             </tr>
           </thead>
           <tbody>
             {fields.map((field) => (
-              <tr key={field.variableId} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '4px 8px' }}>{field.variableName}</td>
-                <td style={{ padding: '4px 8px' }}>{testValues[field.variableName] ?? ''}</td>
-                <td style={{ padding: '4px 8px', color: '#999' }}>--</td>
-                <td style={{ padding: '4px 8px', color: '#999' }}>未実装</td>
-              </tr>
+              <FieldRow
+                key={field.variableId}
+                field={field}
+                inputVal={testValues[field.variableName] ?? ''}
+                fr={findFieldResult(field.variableName)}
+                rowBackground={rowBackground}
+                statusLabel={statusLabel}
+                statusColor={statusColor}
+              />
             ))}
           </tbody>
         </table>
       </section>
     </div>
+  );
+}
+
+function FieldRow({
+  field,
+  inputVal,
+  fr,
+  rowBackground,
+  statusLabel,
+  statusColor,
+}: {
+  readonly field: Field;
+  readonly inputVal: string;
+  readonly fr: FieldResultDto | undefined;
+  readonly rowBackground: (fr: FieldResultDto | undefined, inputVal: string) => string;
+  readonly statusLabel: (status: string) => string;
+  readonly statusColor: (status: string) => string;
+}) {
+  const ocrVal = fr?.rawText ?? '--';
+
+  return (
+    <tr
+      style={{
+        borderBottom: '1px solid #eee',
+        background: rowBackground(fr, inputVal),
+      }}
+    >
+      <td style={{ padding: '4px 8px' }}>{field.variableName}</td>
+      <td style={{ padding: '4px 8px' }}>{inputVal}</td>
+      <td style={{ padding: '4px 8px', fontWeight: fr ? 'bold' : 'normal' }}>{ocrVal}</td>
+      <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+        {fr ? `${(fr.confidence * 100).toFixed(0)}%` : '--'}
+      </td>
+      <td
+        style={{
+          padding: '4px 8px',
+          color: fr ? statusColor(fr.status) : '#999',
+          fontWeight: fr ? 'bold' : 'normal',
+        }}
+      >
+        {fr ? statusLabel(fr.status) : '未実行'}
+      </td>
+    </tr>
   );
 }

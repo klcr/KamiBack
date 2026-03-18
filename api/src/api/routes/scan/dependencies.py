@@ -32,6 +32,7 @@ def get_scan_dependencies() -> dict[str, object]:
         CvPerspectiveCorrector,
     )
     from api.src.infrastructure.cv.qr_detector import PyzbarQrDetector
+    from api.src.infrastructure.ocr.subprocess_ocr_engine import SubprocessOcrEngine
     from api.src.infrastructure.storage.local_file_image_storage import (
         LocalFileImageStorage,
     )
@@ -46,4 +47,5 @@ def get_scan_dependencies() -> dict[str, object]:
         "image_preprocessor": CvImagePreprocessor(),
         "image_storage": LocalFileImageStorage(),
         "manifest_lookup": _manifest_lookup,
+        "ocr_engine": SubprocessOcrEngine(),
     }
