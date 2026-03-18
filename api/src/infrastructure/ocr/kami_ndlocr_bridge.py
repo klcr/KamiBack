@@ -8,6 +8,16 @@ JSON プロトコルに変換して返す。
     入力（stdin）: {"image_path": "/tmp/crop.png", "input_type": "printed"}
     出力（stdout）: {"text": "認識結果", "confidence": 0.95}
 
+出力の解析:
+    NDLOCR-Lite は JSON と XML の両形式で結果を出力する。
+    本スクリプトは JSON を優先し、見つからない場合は XML にフォールバックする。
+
+信頼度について:
+    NDLOCR-Lite の CONF はレイアウト検出（DEIMv2）の信頼度であり、
+    文字認識（PARSeq）の信頼度ではない。PARSeq は argmax で文字を
+    選択するため、認識信頼度を出力しない。このため CONF 値は
+    「その領域にテキストが存在する確信度」として扱う。
+
 使い方:
     export KAMI_OCR_ENGINE_PATH=/path/to/kami_ndlocr_bridge.py
     export NDLOCR_LITE_DIR=/path/to/ndlocr-lite/src
@@ -43,7 +53,7 @@ NDLOCR_TIMEOUT = int(os.environ.get("NDLOCR_TIMEOUT", "60"))
 
 @dataclass(frozen=True)
 class LineResult:
-    """NDLOCR-Lite の LINE 要素から抽出した認識結果。"""
+    """NDLOCR-Lite の認識結果1行分。"""
 
     text: str
     confidence: float
@@ -54,7 +64,7 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
     """NDLOCR-Lite を実行し、テキストと信頼度を返す。
 
     Returns:
-        (text, confidence) — text は全 LINE の結合、confidence は加重平均
+        (text, confidence) — text は全行の結合、confidence は加重平均
     """
     image_path_obj = Path(image_path)
     if not image_path_obj.exists():
@@ -99,21 +109,85 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
 
 
 def parse_ndlocr_output(output_dir: str) -> tuple[str, float]:
-    """NDLOCR-Lite の XML 出力からテキストと信頼度を抽出する。
+    """NDLOCR-Lite の出力からテキストと信頼度を抽出する。
 
-    NDLOCR-Lite の出力 XML フォーマット:
+    JSON 出力を優先し、見つからない場合は XML にフォールバックする。
+
+    Returns:
+        (text, confidence) — 行を ORDER 順に結合したテキストと加重平均信頼度
+    """
+    # JSON を優先（パースが容易、構造が明確）
+    json_result = _parse_json_output(output_dir)
+    if json_result is not None:
+        return json_result
+
+    # XML にフォールバック
+    return _parse_xml_output(output_dir)
+
+
+def _parse_json_output(output_dir: str) -> tuple[str, float] | None:
+    """NDLOCR-Lite の JSON 出力をパースする。
+
+    JSON フォーマット:
+        {
+          "contents": [[
+            {"text": "...", "confidence": 0.95, "id": 0, ...},
+            ...
+          ]],
+          "imginfo": {...}
+        }
+
+    Returns:
+        (text, confidence) or None（JSON が見つからない場合）
+    """
+    json_path = _find_output_file(output_dir, "*.json")
+    if json_path is None:
+        return None
+
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error("Failed to parse JSON: %s", e)
+        return None
+
+    contents = data.get("contents")
+    if not contents or not isinstance(contents, list):
+        return None
+
+    lines: list[LineResult] = []
+    for page in contents:
+        if not isinstance(page, list):
+            continue
+        for item in page:
+            text = item.get("text", "")
+            if not text:
+                continue
+            confidence = float(item.get("confidence", 0.0))
+            order = int(item.get("id", 0))
+            lines.append(LineResult(text=text, confidence=confidence, order=order))
+
+    return _combine_lines(lines)
+
+
+def _parse_xml_output(output_dir: str) -> tuple[str, float]:
+    """NDLOCR-Lite の XML 出力をパースする。
+
+    XML フォーマット:
         <OCRDATASET>
           <PAGE HEIGHT="..." WIDTH="..." IMAGENAME="...">
-            <LINE TYPE="本文" STRING="テキスト" CONF="0.95" ORDER="1" .../>
+            <TEXTBLOCK CONF="...">
+              <LINE TYPE="本文" STRING="テキスト" CONF="0.95" ORDER="1" .../>
+            </TEXTBLOCK>
           </PAGE>
         </OCRDATASET>
 
     Returns:
-        (text, confidence) — LINE を ORDER 順に結合したテキストと加重平均信頼度
+        (text, confidence)
     """
-    xml_path = _find_xml_file(output_dir)
+    xml_path = _find_output_file(output_dir, "*.xml")
     if xml_path is None:
-        logger.warning("No XML output found in %s", output_dir)
+        logger.warning("No output found in %s", output_dir)
         return "", 0.0
 
     try:
@@ -123,15 +197,20 @@ def parse_ndlocr_output(output_dir: str) -> tuple[str, float]:
         return "", 0.0
 
     root = tree.getroot()
-    lines = _extract_lines(root)
+    lines = _extract_lines_from_xml(root)
 
+    return _combine_lines(lines)
+
+
+def _combine_lines(lines: list[LineResult]) -> tuple[str, float]:
+    """LineResult のリストからテキストと加重平均信頼度を算出する。"""
     if not lines:
         return "", 0.0
 
     # ORDER 順にソート
     lines.sort(key=lambda ln: ln.order)
 
-    # テキスト結合（改行なし。ボックス単位の切出画像なので通常1行）
+    # テキスト結合（ボックス単位の切出画像なので通常1行）
     text = "".join(ln.text for ln in lines)
 
     # 信頼度: 文字数で加重平均
@@ -144,31 +223,27 @@ def parse_ndlocr_output(output_dir: str) -> tuple[str, float]:
     return text, weighted_conf
 
 
-def _find_xml_file(output_dir: str) -> str | None:
-    """出力ディレクトリから XML ファイルを探す。
+def _find_output_file(output_dir: str, glob_pattern: str) -> str | None:
+    """出力ディレクトリからファイルを探す。
 
-    NDLOCR-Lite は output_dir 直下または output_dir/*/xml/ に XML を出力する。
+    NDLOCR-Lite は output_dir 直下にフラットに出力する。
     """
     output_path = Path(output_dir)
 
-    # パターン1: output_dir/*/xml/*.xml（標準的な出力構造）
-    xml_files = list(output_path.glob("*/xml/*.xml"))
+    # パターン1: output_dir/*.ext（フラット出力 — NDLOCR-Lite の標準）
+    files = list(output_path.glob(glob_pattern))
 
-    # パターン2: output_dir/*.xml（フラット出力）
-    if not xml_files:
-        xml_files = list(output_path.glob("*.xml"))
+    # パターン2: output_dir/**/*.ext（再帰検索）
+    if not files:
+        files = list(output_path.rglob(glob_pattern))
 
-    # パターン3: output_dir/**/*.xml（再帰検索）
-    if not xml_files:
-        xml_files = list(output_path.rglob("*.xml"))
-
-    if not xml_files:
+    if not files:
         return None
 
-    return str(xml_files[0])
+    return str(files[0])
 
 
-def _extract_lines(root: ET.Element) -> list[LineResult]:
+def _extract_lines_from_xml(root: ET.Element) -> list[LineResult]:
     """XML ルートから LINE 要素を抽出する。"""
     lines: list[LineResult] = []
 
