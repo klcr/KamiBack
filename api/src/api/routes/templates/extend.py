@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, UploadFile
 from fastapi.responses import JSONResponse, Response
 
+from api.src.api.routes.scan.dependencies import register_manifest
 from api.src.api.routes.templates.serializers import serialize_manifest
 from api.src.infrastructure.html_parser import HtmlParseError
 from api.src.use_cases.extend_manifest import extend_manifest_from_html
@@ -26,4 +27,5 @@ async def extend_template_endpoint(file: UploadFile) -> dict[str, object] | Resp
             content={"error": e.message},
         )
 
+    register_manifest(extended)
     return serialize_manifest(extended)

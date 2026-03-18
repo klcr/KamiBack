@@ -79,6 +79,31 @@ describe('CaptureResultPage', () => {
     expect(screen.getByText(/トンボ検出: 4点/)).toBeDefined();
   });
 
+  it('renders correction result with null skew/aspect values', () => {
+    const correctionResult = {
+      imageId: 'img-002',
+      imagePath: '/tmp/img-002.png',
+      templateId: 'test-001',
+      pageIndex: 0,
+      tombo: {
+        detectionCount: 4,
+        hasEstimation: false,
+        skewDegree: null,
+        aspectRatioError: null,
+      },
+      scalePxPerMm: 10.0,
+    };
+    render(
+      <CaptureResultPage
+        manifest={manifest}
+        testValues={{ name: 'test' }}
+        correctionResult={correctionResult}
+      />,
+    );
+    expect(screen.getByText('画像補正完了')).toBeDefined();
+    expect(screen.getByText(/トンボ検出: 4点/)).toBeDefined();
+  });
+
   it('renders comparison table with test values', () => {
     render(<CaptureResultPage manifest={manifest} testValues={{ name: 'test-value' }} />);
     expect(screen.getByText('name')).toBeDefined();

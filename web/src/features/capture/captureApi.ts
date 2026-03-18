@@ -14,8 +14,8 @@ export interface CorrectionResult {
   readonly tombo: {
     readonly detectionCount: number;
     readonly hasEstimation: boolean;
-    readonly skewDegree: number;
-    readonly aspectRatioError: number;
+    readonly skewDegree: number | null;
+    readonly aspectRatioError: number | null;
   };
   readonly scalePxPerMm: number;
 }
@@ -36,11 +36,29 @@ export class CaptureApiError extends Error {
   }
 }
 
-export async function correctImage(file: Blob): Promise<CorrectionResult> {
+export interface CorrectImageOptions {
+  readonly templateId?: string;
+  readonly pageIndex?: number;
+}
+
+export async function correctImage(
+  file: Blob,
+  options?: CorrectImageOptions,
+): Promise<CorrectionResult> {
   const form = new FormData();
   form.append('file', file, 'capture.jpg');
 
-  const res = await fetch(`${BASE_URL}/scan/correct`, {
+  const params = new URLSearchParams();
+  if (options?.templateId != null) {
+    params.set('template_id', options.templateId);
+  }
+  if (options?.pageIndex != null) {
+    params.set('page_index', String(options.pageIndex));
+  }
+  const query = params.toString();
+  const url = `${BASE_URL}/scan/correct${query ? `?${query}` : ''}`;
+
+  const res = await fetch(url, {
     method: 'POST',
     body: form,
   });

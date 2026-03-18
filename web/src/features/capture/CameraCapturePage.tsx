@@ -9,7 +9,12 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import type { ExtendedManifest } from '../../lib/types/manifest';
 import { CaptureGuideOverlay } from './CaptureGuideOverlay';
 import { QrFallbackSelector } from './QrFallbackSelector';
-import { CaptureApiError, type CorrectionResult, correctImage } from './captureApi';
+import {
+  CaptureApiError,
+  type CorrectImageOptions,
+  type CorrectionResult,
+  correctImage,
+} from './captureApi';
 import { useCameraStream } from './useCameraStream';
 
 type PageStatus = 'camera' | 'submitting' | 'qr-fallback' | 'file-fallback';
@@ -35,12 +40,12 @@ export function CameraCapturePage({ manifest, onCaptured }: Props) {
     await submitImage(blob);
   };
 
-  const submitImage = async (blob: Blob) => {
+  const submitImage = async (blob: Blob, options?: CorrectImageOptions) => {
     setPageStatus('submitting');
     setSubmitError(null);
 
     try {
-      const result = await correctImage(blob);
+      const result = await correctImage(blob, options);
       stop();
       onCaptured(result);
     } catch (err) {
@@ -61,11 +66,9 @@ export function CameraCapturePage({ manifest, onCaptured }: Props) {
     setPendingBlob(null);
   };
 
-  const handleQrFallbackConfirm = async (_templateId: string, _pageIndex: number) => {
+  const handleQrFallbackConfirm = async (templateId: string, pageIndex: number) => {
     if (!pendingBlob) return;
-    // TODO: テンプレートID指定付きの再送信（API側の対応が必要）
-    // 現時点では同じ画像を再送信
-    await submitImage(pendingBlob);
+    await submitImage(pendingBlob, { templateId, pageIndex });
   };
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {

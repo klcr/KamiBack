@@ -273,6 +273,40 @@ class TestCorrectImage:
                 manifest_lookup={"test-001": _SAMPLE_MANIFEST},
             )
 
+    def test_override_skips_qr_detection(self) -> None:
+        """override_template_id / override_page_index 指定時はQR検出をスキップする。"""
+        storage = StubImageStorage()
+        result = correct_image(
+            _make_test_image(),
+            qr_detector=StubQrDetector(_QR_FAILED),  # QR検出は失敗するが…
+            tombo_detector=StubTomboDetector(_TOMBO_4_DETECTED),
+            perspective_corrector=StubPerspectiveCorrector(),
+            image_preprocessor=StubImagePreprocessor(),
+            image_storage=storage,
+            manifest_lookup={"test-001": _SAMPLE_MANIFEST},
+            override_template_id="test-001",
+            override_page_index=0,
+        )
+
+        assert result.template_id == "test-001"
+        assert result.page_index == 0
+        assert result.image_id in storage.saved
+
+    def test_override_manifest_not_found(self) -> None:
+        """override指定でもマニフェストが見つからなければエラーになる。"""
+        with pytest.raises(CorrectImageError, match="テンプレートが見つかりません"):
+            correct_image(
+                _make_test_image(),
+                qr_detector=StubQrDetector(_QR_FAILED),
+                tombo_detector=StubTomboDetector(_TOMBO_4_DETECTED),
+                perspective_corrector=StubPerspectiveCorrector(),
+                image_preprocessor=StubImagePreprocessor(),
+                image_storage=StubImageStorage(),
+                manifest_lookup={},
+                override_template_id="nonexistent",
+                override_page_index=0,
+            )
+
     def test_invalid_image_bytes(self) -> None:
         with pytest.raises(CorrectImageError, match="デコード"):
             correct_image(

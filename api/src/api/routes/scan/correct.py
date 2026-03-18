@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 
 from api.src.api.routes.scan.dependencies import get_scan_dependencies
@@ -17,6 +17,8 @@ router = APIRouter()
 @router.post("/correct", response_model=None)
 async def correct_image_endpoint(
     file: UploadFile,
+    template_id: str | None = Query(None, description="QRフォールバック時のテンプレートID"),
+    page_index: int | None = Query(None, description="QRフォールバック時のページインデックス"),
     deps: dict[str, object] = Depends(get_scan_dependencies),  # noqa: B008
 ) -> dict[str, object] | Response:
     """撮影画像を補正して保存する。"""
@@ -31,6 +33,8 @@ async def correct_image_endpoint(
             image_preprocessor=deps["image_preprocessor"],  # type: ignore[arg-type]
             image_storage=deps["image_storage"],  # type: ignore[arg-type]
             manifest_lookup=deps["manifest_lookup"],  # type: ignore[arg-type]
+            override_template_id=template_id,
+            override_page_index=page_index,
         )
     except CorrectImageError as e:
         return JSONResponse(

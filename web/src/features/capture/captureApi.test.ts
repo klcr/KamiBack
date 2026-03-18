@@ -46,6 +46,35 @@ describe('correctImage', () => {
     expect(result).toEqual(mockResult);
   });
 
+  it('appends template_id and page_index as query params when options provided', async () => {
+    const blob = new Blob(['fake-image'], { type: 'image/jpeg' });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResult),
+    } as Response);
+
+    await correctImage(blob, { templateId: 'tmpl-abc', pageIndex: 2 });
+
+    expect(fetch).toHaveBeenCalledOnce();
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe('/api/scan/correct?template_id=tmpl-abc&page_index=2');
+  });
+
+  it('does not append query params when options are omitted', async () => {
+    const blob = new Blob(['fake-image'], { type: 'image/jpeg' });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResult),
+    } as Response);
+
+    await correctImage(blob);
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe('/api/scan/correct');
+  });
+
   it('throws CaptureApiError with userAction on failure', async () => {
     const blob = new Blob(['fake-image'], { type: 'image/jpeg' });
 

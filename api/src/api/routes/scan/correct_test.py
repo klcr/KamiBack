@@ -184,6 +184,20 @@ class TestCorrectEndpoint:
         assert "QRコード" in data["error"]
         assert "userAction" in data
 
+    def test_qr_fallback_with_template_override(self) -> None:
+        """QR検出失敗でもtemplate_id/page_index指定で成功する。"""
+        app.dependency_overrides[get_scan_dependencies] = lambda: _override_deps(qr_detected=False)
+
+        image_bytes = _make_test_image_bytes()
+        response = self.client.post(
+            "/api/scan/correct?template_id=test-001&page_index=0",
+            files={"file": ("photo.png", BytesIO(image_bytes), "image/png")},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["templateId"] == "test-001"
+        assert data["pageIndex"] == 0
+
     def test_invalid_image_returns_400(self) -> None:
         response = self.client.post(
             "/api/scan/correct",

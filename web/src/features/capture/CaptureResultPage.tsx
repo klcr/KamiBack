@@ -46,8 +46,8 @@ export function CaptureResultPage({ manifest, testValues, correctionResult }: Pr
           <strong>画像補正完了</strong>
           <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
             <li>トンボ検出: {correctionResult.tombo.detectionCount}点</li>
-            <li>歪み角度: {correctionResult.tombo.skewDegree.toFixed(1)}°</li>
-            <li>アスペクト比誤差: {correctionResult.tombo.aspectRatioError.toFixed(1)}%</li>
+            <li>歪み角度: {correctionResult.tombo.skewDegree != null ? `${correctionResult.tombo.skewDegree.toFixed(1)}°` : '--'}</li>
+            <li>アスペクト比誤差: {correctionResult.tombo.aspectRatioError != null ? `${correctionResult.tombo.aspectRatioError.toFixed(1)}%` : '--'}</li>
             {correctionResult.tombo.hasEstimation && (
               <li style={{ color: '#e65100' }}>※ 4点目は推定値です</li>
             )}
