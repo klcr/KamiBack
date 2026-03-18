@@ -4,9 +4,13 @@
 SubprocessOcrEngine から呼び出され、NDLOCR-Lite の OCR 結果を
 JSON プロトコルに変換して返す。
 
-プロトコル:
+単一リクエスト:
     入力（stdin）: {"image_path": "/tmp/crop.png", "input_type": "printed"}
     出力（stdout）: {"text": "認識結果", "confidence": 0.95}
+
+バッチリクエスト:
+    入力（stdin）: {"batch": [{"image_path": "...", "input_type": "..."}, ...]}
+    出力（stdout）: {"results": [{"text": "...", "confidence": 0.95}, ...]}
 
 出力の解析:
     NDLOCR-Lite は JSON と XML の両形式で結果を出力する。
@@ -301,10 +305,22 @@ def _extract_lines_from_xml(root: ET.Element) -> list[LineResult]:
 
 
 def _respond(text: str, confidence: float) -> None:
-    """JSON レスポンスを stdout に出力する。"""
+    """JSON レスポンスを stdout に出力する（単一リクエスト用）。"""
     confidence = max(0.0, min(1.0, confidence))
     print(
         json.dumps({"text": text, "confidence": confidence}, ensure_ascii=False),
+        flush=True,
+    )
+
+
+def _respond_batch(results: list[tuple[str, float]]) -> None:
+    """バッチ結果を stdout に出力する。"""
+    items = []
+    for text, confidence in results:
+        confidence = max(0.0, min(1.0, confidence))
+        items.append({"text": text, "confidence": confidence})
+    print(
+        json.dumps({"results": items}, ensure_ascii=False),
         flush=True,
     )
 
@@ -319,14 +335,35 @@ def main() -> None:
         _respond("", 0.0)
         return
 
+    # バッチリクエスト
+    if "batch" in request:
+        batch = request["batch"]
+        if not isinstance(batch, list):
+            logger.error("Invalid batch format")
+            _respond_batch([])
+            return
+
+        logger.info("Batch OCR: %d images", len(batch))
+        results: list[tuple[str, float]] = []
+        for i, item in enumerate(batch):
+            image_path = item.get("image_path", "")
+            if not image_path:
+                results.append(("", 0.0))
+                continue
+            logger.info("Batch item %d/%d: %s", i + 1, len(batch), image_path)
+            text, confidence = run_ndlocr(image_path)
+            results.append((text, confidence))
+
+        _respond_batch(results)
+        return
+
+    # 単一リクエスト（後方互換）
     image_path = request.get("image_path", "")
     if not image_path:
         logger.error("Missing image_path in request")
         _respond("", 0.0)
         return
 
-    # input_type は将来のエンジン切替に使用
-    # 現時点では NDLOCR-Lite は input_type を区別しない
     text, confidence = run_ndlocr(image_path)
     _respond(text, confidence)
 

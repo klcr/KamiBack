@@ -49,6 +49,13 @@ class SubprocessOcrEngine(OcrEngine):
            {"image_path": "/tmp/xxx.png", "input_type": "printed"}
         3. 標準出力からJSONレスポンスを受け取る:
            {"text": "認識結果", "confidence": 0.95}
+
+    バッチプロトコル:
+        1. 入力画像を一時ディレクトリにPNGとして書き出す
+        2. JSONリクエストを標準入力に渡す:
+           {"batch": [{"image_path": "...", "input_type": "..."}, ...]}
+        3. 標準出力からJSONレスポンスを受け取る:
+           {"results": [{"text": "...", "confidence": 0.95}, ...]}
     """
 
     def __init__(
@@ -60,38 +67,43 @@ class SubprocessOcrEngine(OcrEngine):
         self._timeout = timeout or int(os.environ.get(ENV_ENGINE_TIMEOUT, str(DEFAULT_TIMEOUT)))
 
     def recognize(self, image: Any, input_type: InputType) -> OcrEngineResult:
-        """画像から文字列を認識する。
+        """画像から文字列を認識する。"""
+        results = self.recognize_batch([(image, input_type)])
+        return results[0]
 
-        Args:
-            image: 切り出されたボックス画像（numpy ndarray）
-            input_type: フィールドの入力種別
-
-        Returns:
-            認識結果（テキストと信頼度）
-
-        Raises:
-            OcrEngineError: エンジン未設定・実行失敗時
-        """
+    def recognize_batch(
+        self,
+        images: list[tuple[Any, InputType]],
+    ) -> list[OcrEngineResult]:
+        """複数画像をまとめて1回のサブプロセス呼出しで認識する。"""
         if not self._engine_path:
             raise OcrEngineError(
                 f"OCRエンジンのパスが設定されていません。環境変数 {ENV_ENGINE_PATH} を設定してください。"
             )
 
-        img = _to_ndarray(image)
+        if not images:
+            return []
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-            tmp_path = f.name
-            cv2.imwrite(tmp_path, img)
-
+        tmp_dir = tempfile.mkdtemp(prefix="kami_ocr_batch_")
         try:
-            request = {
-                "image_path": tmp_path,
-                "input_type": input_type.value,
-            }
-            result = self._call_engine(json.dumps(request))
-            return _parse_response(result)
+            batch_items = []
+            for i, (image, input_type) in enumerate(images):
+                img = _to_ndarray(image)
+                tmp_path = os.path.join(tmp_dir, f"{i:04d}.png")
+                cv2.imwrite(tmp_path, img)
+                batch_items.append(
+                    {
+                        "image_path": tmp_path,
+                        "input_type": input_type.value,
+                    }
+                )
+
+            request = {"batch": batch_items}
+            logger.info("OCR batch: %d images", len(batch_items))
+            stdout = self._call_engine(json.dumps(request))
+            return _parse_batch_response(stdout, len(images))
         finally:
-            _cleanup_temp(tmp_path)
+            _cleanup_dir(tmp_dir)
 
     def _call_engine(self, stdin_data: str) -> str:
         """サブプロセスを実行してstdoutを返す。
@@ -158,8 +170,38 @@ def _kill_process_group(proc: subprocess.Popen[str]) -> None:
         proc.kill()
 
 
+def _parse_batch_response(stdout: str, expected_count: int) -> list[OcrEngineResult]:
+    """バッチレスポンスをパースする。"""
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as e:
+        raise OcrEngineError(f"OCRエンジンの出力がJSONではありません: {e}") from e
+
+    results_raw = data.get("results")
+    if not isinstance(results_raw, list):
+        raise OcrEngineError(f"OCRエンジンのバッチ出力にresultsがありません: {data}")
+
+    if len(results_raw) != expected_count:
+        raise OcrEngineError(f"バッチ結果数が一致しません（期待: {expected_count}, 実際: {len(results_raw)}）")
+
+    results: list[OcrEngineResult] = []
+    for item in results_raw:
+        text = item.get("text", "")
+        confidence = item.get("confidence", 0.0)
+
+        if not isinstance(text, str):
+            text = ""
+        if not isinstance(confidence, (int, float)):
+            confidence = 0.0
+
+        confidence = max(0.0, min(1.0, float(confidence)))
+        results.append(OcrEngineResult(text=text, confidence=confidence))
+
+    return results
+
+
 def _parse_response(stdout: str) -> OcrEngineResult:
-    """エンジンの標準出力をパースする。"""
+    """エンジンの標準出力をパースする（単一リクエスト用、後方互換）。"""
     try:
         data = json.loads(stdout)
     except json.JSONDecodeError as e:
@@ -185,9 +227,11 @@ def _to_ndarray(image: object) -> NDArray[np.uint8]:
     return image
 
 
-def _cleanup_temp(path: str) -> None:
-    """一時ファイルを削除する。"""
+def _cleanup_dir(path: str) -> None:
+    """一時ディレクトリを削除する。"""
+    import shutil
+
     try:
-        os.unlink(path)
+        shutil.rmtree(path)
     except OSError:
-        logger.warning("Failed to delete temp file: %s", path)
+        logger.warning("Failed to delete temp dir: %s", path)
