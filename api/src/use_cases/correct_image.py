@@ -55,6 +55,8 @@ def correct_image(
     image_preprocessor: ImagePreprocessor,
     image_storage: ImageStorage,
     manifest_lookup: dict[str, ManifestData],
+    override_template_id: str | None = None,
+    override_page_index: int | None = None,
 ) -> CorrectImageResult:
     """撮影画像を補正して保存する。
 
@@ -66,6 +68,8 @@ def correct_image(
         image_preprocessor: 画像前処理器
         image_storage: 画像ストレージ
         manifest_lookup: テンプレートID → ManifestData のマッピング
+        override_template_id: QR検出をスキップして使用するテンプレートID
+        override_page_index: QR検出をスキップして使用するページインデックス
 
     Returns:
         補正結果（画像ID、テンプレートID、ページインデックス、トンボ検出情報）
@@ -76,28 +80,36 @@ def correct_image(
     # 1. バイト列を画像に変換
     image = _decode_image(image_bytes)
 
-    # 2. QRコード検出 → テンプレートID + ページインデックス
-    qr_result = qr_detector.detect(image)
-    if not qr_result.detected:
-        raise CorrectImageError(
-            message="QRコードを検出できませんでした",
-            user_action="QRコードが写るように撮影し直してください",
-        )
-    assert qr_result.template_id is not None
-    assert qr_result.page_index is not None
+    # 2. テンプレートID + ページインデックスの決定
+    if override_template_id is not None and override_page_index is not None:
+        # QRフォールバック: 手動指定されたテンプレート情報を使用
+        template_id = override_template_id
+        page_index = override_page_index
+    else:
+        # 通常フロー: QRコード検出
+        qr_result = qr_detector.detect(image)
+        if not qr_result.detected:
+            raise CorrectImageError(
+                message="QRコードを検出できませんでした",
+                user_action="QRコードが写るように撮影し直してください",
+            )
+        assert qr_result.template_id is not None
+        assert qr_result.page_index is not None
+        template_id = qr_result.template_id
+        page_index = qr_result.page_index
 
     # 3. マニフェスト取得
-    manifest = manifest_lookup.get(qr_result.template_id)
+    manifest = manifest_lookup.get(template_id)
     if manifest is None:
         raise CorrectImageError(
-            message=f"テンプレートが見つかりません: {qr_result.template_id}",
+            message=f"テンプレートが見つかりません: {template_id}",
             user_action="登録済みのテンプレートで印刷した帳票を使用してください",
         )
 
-    page = _find_page(manifest, qr_result.page_index)
+    page = _find_page(manifest, page_index)
     if page is None:
         raise CorrectImageError(
-            message=f"ページが見つかりません: page_index={qr_result.page_index}",
+            message=f"ページが見つかりません: page_index={page_index}",
             user_action="正しいページを撮影してください",
         )
 
@@ -136,8 +148,8 @@ def correct_image(
     return CorrectImageResult(
         image_id=image_id,
         image_path=image_path,
-        template_id=qr_result.template_id,
-        page_index=qr_result.page_index,
+        template_id=template_id,
+        page_index=page_index,
         detection_count=tombo_result.detection_count,
         has_estimation=tombo_result.estimated_points is not None,
         skew_degree=tombo_result.skew_degree,
