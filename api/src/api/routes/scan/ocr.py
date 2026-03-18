@@ -25,7 +25,7 @@ class OcrRequest(BaseModel):
 
 
 @router.post("/ocr", response_model=None)
-async def execute_ocr_endpoint(
+def execute_ocr_endpoint(
     body: OcrRequest,
     deps: dict[str, object] = Depends(get_scan_dependencies),  # noqa: B008
 ) -> dict[str, object] | Response:
