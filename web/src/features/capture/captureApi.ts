@@ -14,8 +14,8 @@ export interface CorrectionResult {
   readonly tombo: {
     readonly detectionCount: number;
     readonly hasEstimation: boolean;
-    readonly skewDegree: number;
-    readonly aspectRatioError: number;
+    readonly skewDegree: number | null;
+    readonly aspectRatioError: number | null;
   };
   readonly scalePxPerMm: number;
 }
