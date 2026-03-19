@@ -4,9 +4,13 @@
 SubprocessOcrEngine から呼び出され、NDLOCR-Lite の OCR 結果を
 JSON プロトコルに変換して返す。
 
-プロトコル:
+単一リクエスト:
     入力（stdin）: {"image_path": "/tmp/crop.png", "input_type": "printed"}
     出力（stdout）: {"text": "認識結果", "confidence": 0.95}
+
+バッチリクエスト:
+    入力（stdin）: {"batch": [{"image_path": "...", "input_type": "..."}, ...]}
+    出力（stdout）: {"results": [{"text": "...", "confidence": 0.95}, ...]}
 
 出力の解析:
     NDLOCR-Lite は JSON と XML の両形式で結果を出力する。
@@ -28,6 +32,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -35,7 +40,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
+logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
 # NDLOCR-Lite の src ディレクトリ
@@ -87,25 +92,55 @@ def run_ndlocr(image_path: str) -> tuple[str, float]:
         ]
 
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=NDLOCR_TIMEOUT,
+                start_new_session=True,
             )
+        except FileNotFoundError:
+            logger.error("NDLOCR-Lite Python not found: %s", NDLOCR_PYTHON)
+            return "", 0.0
+
+        logger.info("NDLOCR-Lite starting: %s", " ".join(cmd))
+
+        try:
+            stdout, stderr = proc.communicate(timeout=NDLOCR_TIMEOUT)
         except subprocess.TimeoutExpired:
+            _kill_process_group(proc)
             logger.error("NDLOCR-Lite timed out after %ds", NDLOCR_TIMEOUT)
             return "", 0.0
+
+        if stderr:
+            logger.info("NDLOCR-Lite stderr: %s", stderr.strip()[:500])
 
         if proc.returncode != 0:
             logger.error(
                 "NDLOCR-Lite failed (code=%d): %s",
                 proc.returncode,
-                proc.stderr[:500],
+                stderr[:500],
             )
             return "", 0.0
 
-        return parse_ndlocr_output(tmpdir)
+        result = parse_ndlocr_output(tmpdir)
+        logger.info("NDLOCR-Lite result: text=%r, confidence=%.2f", result[0][:50], result[1])
+        return result
+
+
+def _kill_process_group(proc: subprocess.Popen[str]) -> None:
+    """プロセスグループ全体を kill する。"""
+    try:
+        if sys.platform == "win32":
+            proc.kill()
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
 
 
 def parse_ndlocr_output(output_dir: str) -> tuple[str, float]:
@@ -270,10 +305,22 @@ def _extract_lines_from_xml(root: ET.Element) -> list[LineResult]:
 
 
 def _respond(text: str, confidence: float) -> None:
-    """JSON レスポンスを stdout に出力する。"""
+    """JSON レスポンスを stdout に出力する（単一リクエスト用）。"""
     confidence = max(0.0, min(1.0, confidence))
     print(
         json.dumps({"text": text, "confidence": confidence}, ensure_ascii=False),
+        flush=True,
+    )
+
+
+def _respond_batch(results: list[tuple[str, float]]) -> None:
+    """バッチ結果を stdout に出力する。"""
+    items = []
+    for text, confidence in results:
+        confidence = max(0.0, min(1.0, confidence))
+        items.append({"text": text, "confidence": confidence})
+    print(
+        json.dumps({"results": items}, ensure_ascii=False),
         flush=True,
     )
 
@@ -288,14 +335,35 @@ def main() -> None:
         _respond("", 0.0)
         return
 
+    # バッチリクエスト
+    if "batch" in request:
+        batch = request["batch"]
+        if not isinstance(batch, list):
+            logger.error("Invalid batch format")
+            _respond_batch([])
+            return
+
+        logger.info("Batch OCR: %d images", len(batch))
+        results: list[tuple[str, float]] = []
+        for i, item in enumerate(batch):
+            image_path = item.get("image_path", "")
+            if not image_path:
+                results.append(("", 0.0))
+                continue
+            logger.info("Batch item %d/%d: %s", i + 1, len(batch), image_path)
+            text, confidence = run_ndlocr(image_path)
+            results.append((text, confidence))
+
+        _respond_batch(results)
+        return
+
+    # 単一リクエスト（後方互換）
     image_path = request.get("image_path", "")
     if not image_path:
         logger.error("Missing image_path in request")
         _respond("", 0.0)
         return
 
-    # input_type は将来のエンジン切替に使用
-    # 現時点では NDLOCR-Lite は input_type を区別しない
     text, confidence = run_ndlocr(image_path)
     _respond(text, confidence)
 

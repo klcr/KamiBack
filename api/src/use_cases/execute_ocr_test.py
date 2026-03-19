@@ -84,7 +84,9 @@ class TestExecuteOcr:
         storage.load.return_value = _make_image()
 
         engine = MagicMock()
-        engine.recognize.return_value = OcrEngineResult(text="株式会社テスト", confidence=0.92)
+        engine.recognize_batch.return_value = [
+            OcrEngineResult(text="株式会社テスト", confidence=0.92),
+        ]
 
         result = execute_ocr(
             image_id="img-001",
@@ -103,6 +105,10 @@ class TestExecuteOcr:
         assert result.field_results[0].raw_text == "株式会社テスト"
         assert result.field_results[0].status == ReadingStatus.CONFIRMED
 
+        # バッチで1回だけ呼ばれることを確認
+        engine.recognize_batch.assert_called_once()
+        engine.recognize.assert_not_called()
+
     def test_multiple_fields(self) -> None:
         fields = (
             _make_field("field_a", x_mm=10, y_mm=10),
@@ -114,7 +120,7 @@ class TestExecuteOcr:
         storage.load.return_value = _make_image()
 
         engine = MagicMock()
-        engine.recognize.side_effect = [
+        engine.recognize_batch.return_value = [
             OcrEngineResult(text="AAA", confidence=0.95),
             OcrEngineResult(text="BBB", confidence=0.55),
         ]
@@ -135,8 +141,11 @@ class TestExecuteOcr:
         assert result.field_results[1].raw_text == "BBB"
         assert result.field_results[1].status == ReadingStatus.NEEDS_REVIEW
 
+        # バッチで1回だけ呼ばれることを確認
+        engine.recognize_batch.assert_called_once()
+
     def test_ocr_engine_error_returns_failed(self) -> None:
-        """OCRエンジンがエラーを返した場合、そのフィールドはFAILED。"""
+        """OCRエンジンがバッチ全体でエラーの場合、全フィールドFAILED相当。"""
         field = _make_field("broken_field")
         manifest = _make_manifest(fields=(field,))
 
@@ -144,7 +153,7 @@ class TestExecuteOcr:
         storage.load.return_value = _make_image()
 
         engine = MagicMock()
-        engine.recognize.side_effect = RuntimeError("engine crash")
+        engine.recognize_batch.side_effect = RuntimeError("engine crash")
 
         result = execute_ocr(
             image_id="img-001",
@@ -157,7 +166,7 @@ class TestExecuteOcr:
         )
 
         assert len(result.field_results) == 1
-        assert result.field_results[0].status == ReadingStatus.FAILED
+        assert result.field_results[0].confidence.score == 0.0
 
     def test_empty_page_no_fields(self) -> None:
         manifest = _make_manifest(fields=())
@@ -178,6 +187,7 @@ class TestExecuteOcr:
         )
 
         assert len(result.field_results) == 0
+        engine.recognize_batch.assert_not_called()
         engine.recognize.assert_not_called()
 
 

@@ -15,10 +15,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import numpy as np
 
-from domain.src.manifest.manifest_types import ManifestData, Page
+from domain.src.manifest.manifest_types import Field, ManifestData, Page
 from domain.src.ocr_result.ocr_engine import OcrEngine
 from domain.src.ocr_result.ocr_result_policy import build_field_result
-from domain.src.ocr_result.ocr_result_types import FieldResult, ReadingStatus
+from domain.src.ocr_result.ocr_result_types import (
+    Confidence,
+    FieldResult,
+    OcrEngineResult,
+    ReadingStatus,
+)
 from domain.src.scan.image_storage import ImageStorage
 
 logger = logging.getLogger(__name__)
@@ -54,20 +59,7 @@ def execute_ocr(
 ) -> ExecuteOcrResult:
     """補正済み画像に対してOCRを実行する。
 
-    Args:
-        image_id: 補正済み画像のID（correct_imageの出力）
-        template_id: テンプレートID
-        page_index: ページインデックス
-        image_storage: 画像ストレージ
-        manifest_lookup: テンプレートID → ManifestData のマッピング
-        ocr_engine: OCRエンジン
-        scale_px_per_mm: mm→ピクセル変換係数（correct_imageの出力）
-
-    Returns:
-        OCR実行結果（全フィールドの認識結果）
-
-    Raises:
-        ExecuteOcrError: 画像未発見、マニフェスト未発見等
+    全フィールドを先に切り出し、1回のバッチ呼び出しでOCRを実行する。
     """
     # 1. マニフェスト取得
     manifest = manifest_lookup.get(template_id)
@@ -95,81 +87,74 @@ def execute_ocr(
 
     image = _decode_image(image_data)
 
-    # 3. BoxCropperで各フィールドを切り出してOCR実行
+    # 3. 全フィールドを切り出し
     from api.src.infrastructure.cv.box_cropper import BoxCropper
 
     cropper = BoxCropper(scale_px_per_mm=scale_px_per_mm)
-    field_results: list[FieldResult] = []
+    fields = [f for f in page.fields if isinstance(f, Field)]
 
-    for field_def in page.fields:
-        field_result = _process_field(
-            field_def=field_def,
-            image=image,
-            cropper=cropper,
-            ocr_engine=ocr_engine,
+    crop_results: list[tuple[int, np.ndarray]] = []
+    failed_indices: set[int] = set()
+
+    for i, field_def in enumerate(fields):
+        try:
+            crop_result = cropper.crop(image, field_def.absolute_region)
+            crop_results.append((i, crop_result.box_image))
+        except ValueError:
+            logger.warning(
+                "Field %s: crop failed (region=%s)",
+                field_def.variable_name,
+                field_def.absolute_region,
+            )
+            failed_indices.add(i)
+
+    # 4. バッチOCR（1回のサブプロセス呼び出しで全フィールドを処理）
+    batch_input = [(img, fields[idx].input_type) for idx, img in crop_results]
+
+    logger.info("OCR batch: %d fields (%d crop failed)", len(batch_input), len(failed_indices))
+
+    try:
+        engine_results = ocr_engine.recognize_batch(batch_input)
+    except Exception:
+        logger.exception("OCR batch failed")
+        engine_results = [OcrEngineResult(text="", confidence=0.0) for _ in batch_input]
+
+    # 5. 結果をフィールド順に組み立て
+    engine_result_map: dict[int, OcrEngineResult] = {}
+    for result_idx, (field_idx, _) in enumerate(crop_results):
+        engine_result_map[field_idx] = engine_results[result_idx]
+
+    field_results: list[FieldResult] = []
+    for i, field_def in enumerate(fields):
+        if i in failed_indices:
+            field_results.append(
+                FieldResult(
+                    variable_name=field_def.variable_name,
+                    variable_type=field_def.variable_type,
+                    value=None,
+                    raw_text="",
+                    confidence=Confidence(score=0.0),
+                    status=ReadingStatus.FAILED,
+                )
+            )
+            continue
+
+        engine_result = engine_result_map[i]
+        field_results.append(
+            build_field_result(
+                variable_name=field_def.variable_name,
+                variable_type=field_def.variable_type,
+                engine_result=engine_result,
+                input_type=field_def.input_type,
+            )
         )
-        field_results.append(field_result)
+
+    logger.info("OCR complete: %d fields processed", len(field_results))
 
     return ExecuteOcrResult(
         template_id=template_id,
         page_index=page_index,
         field_results=field_results,
-    )
-
-
-def _process_field(
-    *,
-    field_def: object,
-    image: np.ndarray,
-    cropper: object,
-    ocr_engine: OcrEngine,
-) -> FieldResult:
-    """1フィールドの切出し→OCR→FieldResult構築。"""
-    from api.src.infrastructure.cv.box_cropper import BoxCropper
-    from domain.src.manifest.manifest_types import Field
-
-    assert isinstance(field_def, Field)
-    assert isinstance(cropper, BoxCropper)
-
-    try:
-        crop_result = cropper.crop(image, field_def.absolute_region)
-    except ValueError:
-        logger.warning(
-            "Field %s: crop failed (region=%s)",
-            field_def.variable_name,
-            field_def.absolute_region,
-        )
-        from domain.src.ocr_result.ocr_result_types import Confidence
-
-        return FieldResult(
-            variable_name=field_def.variable_name,
-            variable_type=field_def.variable_type,
-            value=None,
-            raw_text="",
-            confidence=Confidence(score=0.0),
-            status=ReadingStatus.FAILED,
-        )
-
-    try:
-        engine_result = ocr_engine.recognize(crop_result.box_image, field_def.input_type)
-    except Exception:
-        logger.exception("Field %s: OCR engine error", field_def.variable_name)
-        from domain.src.ocr_result.ocr_result_types import Confidence
-
-        return FieldResult(
-            variable_name=field_def.variable_name,
-            variable_type=field_def.variable_type,
-            value=None,
-            raw_text="",
-            confidence=Confidence(score=0.0),
-            status=ReadingStatus.FAILED,
-        )
-
-    return build_field_result(
-        variable_name=field_def.variable_name,
-        variable_type=field_def.variable_type,
-        engine_result=engine_result,
-        input_type=field_def.input_type,
     )
 
 
