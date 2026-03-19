@@ -47,6 +47,11 @@ class HtmlParseError(Exception):
 def parse_manifest_from_html(html: str) -> ManifestData:
     """HTMLテンプレートの<script id="template-manifest">からマニフェストJSONを抽出する。"""
     soup = BeautifulSoup(html, "html.parser")
+    return _parse_manifest_from_soup(soup)
+
+
+def _parse_manifest_from_soup(soup: BeautifulSoup) -> ManifestData:
+    """BeautifulSoupインスタンスからマニフェストJSONを抽出する。"""
     script_tag = soup.find("script", id="template-manifest")
     if script_tag is None or not isinstance(script_tag, Tag):
         raise HtmlParseError('HTMLに <script id="template-manifest"> が見つかりません')
@@ -66,6 +71,22 @@ def parse_manifest_from_html(html: str) -> ManifestData:
 def parse_template_metadata(html: str) -> TemplateMetadata:
     """HTMLテンプレートのDOM要素をパースしてTemplateMetadataを生成する。"""
     soup = BeautifulSoup(html, "html.parser")
+    return _parse_template_metadata_from_soup(soup, html)
+
+
+def parse_html(html: str) -> tuple[ManifestData, TemplateMetadata]:
+    """HTMLテンプレートをパースし、マニフェストとテンプレートメタデータを返す。
+
+    BeautifulSoupインスタンスを1回だけ生成して両方の抽出に使い回す。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    manifest = _parse_manifest_from_soup(soup)
+    template = _parse_template_metadata_from_soup(soup, html)
+    return manifest, template
+
+
+def _parse_template_metadata_from_soup(soup: BeautifulSoup, html: str) -> TemplateMetadata:
+    """BeautifulSoupインスタンスからTemplateMetadataを生成する。"""
 
     # <div class="page"> または <section class="sheet"> をページコンテナとして検出
     page_divs: list[Tag] = [t for t in soup.find_all("div", class_="page") if isinstance(t, Tag)]

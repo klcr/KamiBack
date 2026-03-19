@@ -6,7 +6,9 @@
 
 import { useState } from 'react';
 import { type AppStep, StepIndicator } from './components/StepIndicator';
+import { CameraCapturePage } from './features/capture/CameraCapturePage';
 import { CaptureResultPage } from './features/capture/CaptureResultPage';
+import type { CorrectionResult } from './features/capture/captureApi';
 import { PrintPreviewPage } from './features/print/PrintPreviewPage';
 import { TemplateUploadPage } from './features/template/TemplateUploadPage';
 import { VariableEntryPage } from './features/template/VariableEntryPage';
@@ -18,6 +20,7 @@ interface AppState {
   originalHtml: string;
   boundHtml: string;
   testValues: Record<string, string>;
+  correctionResult: CorrectionResult | null;
 }
 
 const INITIAL_STATE: AppState = {
@@ -26,6 +29,7 @@ const INITIAL_STATE: AppState = {
   originalHtml: '',
   boundHtml: '',
   testValues: {},
+  correctionResult: null,
 };
 
 export function App() {
@@ -39,8 +43,12 @@ export function App() {
     setState((prev) => ({ ...prev, step: 'preview', boundHtml, testValues }));
   };
 
-  const handleToCapture = () => {
-    setState((prev) => ({ ...prev, step: 'capture' }));
+  const handleToCamera = () => {
+    setState((prev) => ({ ...prev, step: 'camera' }));
+  };
+
+  const handleCaptured = (result: CorrectionResult) => {
+    setState((prev) => ({ ...prev, step: 'capture', correctionResult: result }));
   };
 
   const handleReset = () => {
@@ -67,15 +75,23 @@ export function App() {
         <div>
           <PrintPreviewPage manifest={state.manifest} boundHtml={state.boundHtml} />
           <div style={{ textAlign: 'center', marginTop: '16px' }}>
-            <button type="button" onClick={handleToCapture} style={{ padding: '8px 24px' }}>
+            <button type="button" onClick={handleToCamera} style={{ padding: '8px 24px' }}>
               撮影へ進む
             </button>
           </div>
         </div>
       )}
 
+      {state.step === 'camera' && state.manifest && (
+        <CameraCapturePage manifest={state.manifest} onCaptured={handleCaptured} />
+      )}
+
       {state.step === 'capture' && state.manifest && (
-        <CaptureResultPage manifest={state.manifest} testValues={state.testValues} />
+        <CaptureResultPage
+          manifest={state.manifest}
+          testValues={state.testValues}
+          correctionResult={state.correctionResult}
+        />
       )}
 
       {state.step !== 'upload' && (

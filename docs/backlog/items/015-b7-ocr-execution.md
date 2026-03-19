@@ -1,7 +1,7 @@
 # Backlog 015: B-7: OCR実行
 
 ## 状態
-未着手
+完了
 
 ## 担当
 —
@@ -20,10 +20,10 @@ api/, domain/
 - [ ] NDLOCR-Lite統合
 
 ## 実装チェックリスト
-- [ ] OcrEngine ABC実装(domain/)
-- [ ] NDLOCR-Lite統合(api/infra)
-- [ ] inputType別切替
-- [ ] テスト
+- [x] OcrEngine ABC実装(domain/) — 既存
+- [x] NDLOCR-Lite統合(api/infra) — SubprocessOcrEngine実装済み（エンジン本体は別途セットアップ）
+- [x] inputType別切替 — recognizeメソッドがinput_typeを受け取りエンジンに渡す
+- [x] テスト
 
 ## 着手時の注意事項
 エンジンの差し替えを前提にする。「画像→文字列と信頼度」の統一インターフェースとする。

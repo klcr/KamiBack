@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from api.src.use_cases.parse_template import parse_template
+from api.src.use_cases.parse_template import ParseTemplateResult, parse_template
 from domain.src.manifest.manifest import Manifest
 from domain.src.manifest.manifest_types import (
     Field,
@@ -23,11 +23,20 @@ from domain.src.template.template_types import Box, PageTemplate
 
 def extend_manifest_from_html(
     html: str,
+    *,
+    parsed: ParseTemplateResult | None = None,
     tombo_offset_mm: float = 5.0,
     tombo_radius_mm: float = 3.0,
 ) -> ManifestData:
-    """HTMLテンプレートをパースし、拡張マニフェストを返す。"""
-    result = parse_template(html)
+    """HTMLテンプレートをパースし、拡張マニフェストを返す。
+
+    Args:
+        html: HTMLテンプレート文字列（parsedが未指定の場合に使用）
+        parsed: パース済み結果。指定すると再パースを省略する。
+        tombo_offset_mm: トンボのオフセット（mm）
+        tombo_radius_mm: トンボの半径（mm）
+    """
+    result = parsed if parsed is not None else parse_template(html)
     manifest_with_vars = _merge_dom_variables(result.manifest, result.template.pages)
     manifest_entity = Manifest(data=manifest_with_vars)
     extended = manifest_entity.extend(

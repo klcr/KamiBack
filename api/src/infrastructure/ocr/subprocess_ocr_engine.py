@@ -1,0 +1,237 @@
+"""サブプロセス呼出しによるOCRエンジン実装。
+
+NDLOCR-Liteをサブプロセスとして呼び出す。
+JSON入出力を標準化し、将来のHTTPマイクロサービス化を容易にする（DJ-3）。
+
+環境変数:
+    KAMI_OCR_ENGINE_PATH: OCRエンジンの実行パス
+    KAMI_OCR_ENGINE_TIMEOUT: タイムアウト秒数（デフォルト: 30）
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import signal
+import subprocess
+import sys
+import tempfile
+from typing import Any
+
+import cv2
+import numpy as np
+from numpy.typing import NDArray
+
+from domain.src.manifest.manifest_types import InputType
+from domain.src.ocr_result.ocr_engine import OcrEngine
+from domain.src.ocr_result.ocr_result_types import OcrEngineResult
+
+logger = logging.getLogger(__name__)
+
+# 環境変数キー
+ENV_ENGINE_PATH = "KAMI_OCR_ENGINE_PATH"
+ENV_ENGINE_TIMEOUT = "KAMI_OCR_ENGINE_TIMEOUT"
+
+DEFAULT_TIMEOUT = 30
+
+
+class OcrEngineError(Exception):
+    """OCRエンジンの実行エラー。"""
+
+
+class SubprocessOcrEngine(OcrEngine):
+    """サブプロセスでOCRエンジンを呼び出す実装。
+
+    プロトコル:
+        1. 入力画像をPNGとして一時ファイルに書き出す
+        2. JSONリクエストを標準入力に渡す:
+           {"image_path": "/tmp/xxx.png", "input_type": "printed"}
+        3. 標準出力からJSONレスポンスを受け取る:
+           {"text": "認識結果", "confidence": 0.95}
+
+    バッチプロトコル:
+        1. 入力画像を一時ディレクトリにPNGとして書き出す
+        2. JSONリクエストを標準入力に渡す:
+           {"batch": [{"image_path": "...", "input_type": "..."}, ...]}
+        3. 標準出力からJSONレスポンスを受け取る:
+           {"results": [{"text": "...", "confidence": 0.95}, ...]}
+    """
+
+    def __init__(
+        self,
+        engine_path: str | None = None,
+        timeout: int | None = None,
+    ) -> None:
+        self._engine_path = engine_path or os.environ.get(ENV_ENGINE_PATH, "")
+        self._timeout = timeout or int(os.environ.get(ENV_ENGINE_TIMEOUT, str(DEFAULT_TIMEOUT)))
+
+    def recognize(self, image: Any, input_type: InputType) -> OcrEngineResult:
+        """画像から文字列を認識する。"""
+        results = self.recognize_batch([(image, input_type)])
+        return results[0]
+
+    def recognize_batch(
+        self,
+        images: list[tuple[Any, InputType]],
+    ) -> list[OcrEngineResult]:
+        """複数画像をまとめて1回のサブプロセス呼出しで認識する。"""
+        if not self._engine_path:
+            raise OcrEngineError(
+                f"OCRエンジンのパスが設定されていません。環境変数 {ENV_ENGINE_PATH} を設定してください。"
+            )
+
+        if not images:
+            return []
+
+        tmp_dir = tempfile.mkdtemp(prefix="kami_ocr_batch_")
+        try:
+            batch_items = []
+            for i, (image, input_type) in enumerate(images):
+                img = _to_ndarray(image)
+                tmp_path = os.path.join(tmp_dir, f"{i:04d}.png")
+                cv2.imwrite(tmp_path, img)
+                batch_items.append(
+                    {
+                        "image_path": tmp_path,
+                        "input_type": input_type.value,
+                    }
+                )
+
+            request = {"batch": batch_items}
+            logger.info("OCR batch: %d images", len(batch_items))
+            stdout = self._call_engine(json.dumps(request))
+            return _parse_batch_response(stdout, len(images))
+        finally:
+            _cleanup_dir(tmp_dir)
+
+    def _call_engine(self, stdin_data: str) -> str:
+        """サブプロセスを実行してstdoutを返す。
+
+        start_new_session=True でプロセスグループを分離し、
+        タイムアウト時はグループ全体を kill する。
+        NDLOCR-Lite が生成する子プロセス（PyTorch推論ワーカー等）が
+        パイプを保持してハングする問題を防ぐ。
+        """
+        cmd = self._build_command()
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True,
+            )
+        except FileNotFoundError as e:
+            raise OcrEngineError(f"OCRエンジンが見つかりません: {self._engine_path}") from e
+
+        try:
+            stdout, stderr = proc.communicate(input=stdin_data, timeout=self._timeout)
+        except subprocess.TimeoutExpired as e:
+            _kill_process_group(proc)
+            raise OcrEngineError(f"OCRエンジンがタイムアウトしました（{self._timeout}秒）") from e
+
+        if stderr:
+            logger.warning("OCR engine stderr: %s", stderr.strip()[:500])
+
+        if proc.returncode != 0:
+            raise OcrEngineError(f"OCRエンジンがエラーで終了しました（code={proc.returncode}）: {stderr[:200]}")
+
+        logger.debug("OCR engine stdout: %s", stdout.strip()[:200])
+        return stdout
+
+    def _build_command(self) -> list[str]:
+        """実行コマンドを組み立てる。
+
+        Windowsではシバンが機能しないため、sys.executableで明示的に
+        Pythonインタープリタを指定する。
+        """
+        if sys.platform == "win32":
+            return [sys.executable, self._engine_path]
+        return [self._engine_path]
+
+
+def _kill_process_group(proc: subprocess.Popen[str]) -> None:
+    """プロセスグループ全体を kill する。
+
+    start_new_session=True で起動したプロセスとその子孫すべてを終了させる。
+    """
+    try:
+        if sys.platform == "win32":
+            proc.kill()
+        else:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def _parse_batch_response(stdout: str, expected_count: int) -> list[OcrEngineResult]:
+    """バッチレスポンスをパースする。"""
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as e:
+        raise OcrEngineError(f"OCRエンジンの出力がJSONではありません: {e}") from e
+
+    results_raw = data.get("results")
+    if not isinstance(results_raw, list):
+        raise OcrEngineError(f"OCRエンジンのバッチ出力にresultsがありません: {data}")
+
+    if len(results_raw) != expected_count:
+        raise OcrEngineError(f"バッチ結果数が一致しません（期待: {expected_count}, 実際: {len(results_raw)}）")
+
+    results: list[OcrEngineResult] = []
+    for item in results_raw:
+        text = item.get("text", "")
+        confidence = item.get("confidence", 0.0)
+
+        if not isinstance(text, str):
+            text = ""
+        if not isinstance(confidence, (int, float)):
+            confidence = 0.0
+
+        confidence = max(0.0, min(1.0, float(confidence)))
+        results.append(OcrEngineResult(text=text, confidence=confidence))
+
+    return results
+
+
+def _parse_response(stdout: str) -> OcrEngineResult:
+    """エンジンの標準出力をパースする（単一リクエスト用、後方互換）。"""
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as e:
+        raise OcrEngineError(f"OCRエンジンの出力がJSONではありません: {e}") from e
+
+    text = data.get("text", "")
+    confidence = data.get("confidence", 0.0)
+
+    if not isinstance(text, str):
+        raise OcrEngineError(f"OCRエンジンの出力にtextがありません: {data}")
+    if not isinstance(confidence, (int, float)):
+        raise OcrEngineError(f"OCRエンジンの出力にconfidenceがありません: {data}")
+
+    confidence = max(0.0, min(1.0, float(confidence)))
+
+    return OcrEngineResult(text=text, confidence=confidence)
+
+
+def _to_ndarray(image: object) -> NDArray[np.uint8]:
+    """入力をnumpy ndarrayに変換する。"""
+    if not isinstance(image, np.ndarray):
+        raise TypeError(f"Expected numpy ndarray, got {type(image).__name__}")
+    return image
+
+
+def _cleanup_dir(path: str) -> None:
+    """一時ディレクトリを削除する。"""
+    import shutil
+
+    try:
+        shutil.rmtree(path)
+    except OSError:
+        logger.warning("Failed to delete temp dir: %s", path)

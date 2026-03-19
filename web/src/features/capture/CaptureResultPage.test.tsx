@@ -49,9 +49,64 @@ describe('CaptureResultPage', () => {
     ],
   };
 
-  it('renders Module B not-implemented banner', () => {
-    render(<CaptureResultPage manifest={manifest} testValues={{ name: 'test' }} />);
-    expect(screen.getByText(/復路（Module B）は未実装です/)).toBeDefined();
+  const correctionResult = {
+    imageId: 'img-001',
+    imagePath: '/tmp/img-001.png',
+    templateId: 'test-001',
+    pageIndex: 0,
+    tombo: {
+      detectionCount: 4,
+      hasEstimation: false,
+      skewDegree: 1.2,
+      aspectRatioError: 0.5,
+    },
+    scalePxPerMm: 10.0,
+  };
+
+  it('renders OCR execute button when correction result is provided', () => {
+    render(
+      <CaptureResultPage
+        manifest={manifest}
+        testValues={{ name: 'test' }}
+        correctionResult={correctionResult}
+      />,
+    );
+    expect(screen.getByText('OCRを実行')).toBeDefined();
+  });
+
+  it('renders correction result when provided', () => {
+    render(
+      <CaptureResultPage
+        manifest={manifest}
+        testValues={{ name: 'test' }}
+        correctionResult={correctionResult}
+      />,
+    );
+    expect(screen.getByText('画像補正完了')).toBeDefined();
+    expect(screen.getByText(/トンボ検出: 4点/)).toBeDefined();
+  });
+
+  it('renders correction result with null skew/aspect values', () => {
+    const result = {
+      ...correctionResult,
+      imageId: 'img-002',
+      imagePath: '/tmp/img-002.png',
+      tombo: {
+        detectionCount: 4,
+        hasEstimation: false,
+        skewDegree: null,
+        aspectRatioError: null,
+      },
+    };
+    render(
+      <CaptureResultPage
+        manifest={manifest}
+        testValues={{ name: 'test' }}
+        correctionResult={result}
+      />,
+    );
+    expect(screen.getByText('画像補正完了')).toBeDefined();
+    expect(screen.getByText(/トンボ検出: 4点/)).toBeDefined();
   });
 
   it('renders comparison table with test values', () => {
@@ -60,12 +115,24 @@ describe('CaptureResultPage', () => {
     expect(screen.getByText('test-value')).toBeDefined();
   });
 
-  it('renders image upload input', () => {
+  it('renders image upload input when no correction result', () => {
     const { container } = render(
       <CaptureResultPage manifest={manifest} testValues={{ name: 'test' }} />,
     );
     const input = container.querySelector('input[type="file"]');
     expect(input).toBeDefined();
     expect(input?.getAttribute('accept')).toBe('image/*');
+  });
+
+  it('does not show image upload when correction result is present', () => {
+    const { container } = render(
+      <CaptureResultPage
+        manifest={manifest}
+        testValues={{ name: 'test' }}
+        correctionResult={correctionResult}
+      />,
+    );
+    const input = container.querySelector('input[type="file"]');
+    expect(input).toBeNull();
   });
 });

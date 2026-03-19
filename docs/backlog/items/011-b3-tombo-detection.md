@@ -1,7 +1,7 @@
 # Backlog 011: B-3: トンボ検出
 
 ## 状態
-未着手
+完了
 
 ## 担当
 —
@@ -16,14 +16,14 @@ api/, domain/
 前提マイルストーンが未完了
 
 ## 前提条件
-- [ ] M2完了
-- [ ] OpenCV依存の追加
+- [x] M2完了
+- [x] OpenCV依存の追加
 
 ## 実装チェックリスト
-- [ ] HoughTomboDetector実装
-- [ ] TomboDetector ABCのinfra実装
-- [ ] 3点検出フォールバック
-- [ ] テスト
+- [x] HoughTomboDetector実装
+- [x] TomboDetector ABCのinfra実装
+- [x] 3点検出フォールバック
+- [x] テスト
 
 ## 着手時の注意事項
 判断基準4「事前学習に依存しない」。古典的CV手法のみ使用。domain/にABC、api/infraに実装する。

@@ -32,3 +32,20 @@ class OcrEngine(ABC):
         Returns:
             認識結果（テキストと信頼度）
         """
+
+    def recognize_batch(
+        self,
+        images: list[tuple[Any, InputType]],
+    ) -> list[OcrEngineResult]:
+        """複数画像をまとめて認識する。
+
+        デフォルト実装は1件ずつrecognizeを呼ぶ。
+        サブクラスでオーバーライドしてバッチ処理を実装できる。
+
+        Args:
+            images: [(画像, 入力種別), ...] のリスト
+
+        Returns:
+            認識結果のリスト（入力と同じ順序）
+        """
+        return [self.recognize(image, input_type) for image, input_type in images]
